@@ -28,8 +28,8 @@ public class EmployeeServiceImpl implements EmployeeService {
 
     @Autowired
     private EmployeeMapper employeeMapper;
-    @Autowired
-    private EmployeeService employeeService;
+    /*@Autowired
+    private EmployeeService employeeService;*/
 
     /**
      * 员工登录
@@ -96,5 +96,30 @@ public class EmployeeServiceImpl implements EmployeeService {
         Page<Employee> page = employeeMapper.pageQuery(employeePageQueryDTO);
         PageResult pageResult = new PageResult(page.getTotal(), page.getResult());
         return pageResult;
+    }
+
+    /**
+     * 设置员工状态
+     * @param status
+     * @param id
+     */
+    public void updateStatus(Integer status, Long id) {
+        //update employee set status = ? where id = ?
+        Employee employee = new Employee();
+        employee.setStatus(status);
+        employee.setId(id);
+        employeeMapper.updateEmployee(employee);
+    }
+
+    /**
+     * 查询员工信息
+     * @param id
+     * @return
+     */
+    public Employee getById(Long id){
+        //select * from employee where id = ?
+        Employee employee = employeeMapper.getById(id);
+        employee.setPassword("******");
+        return employee;
     }
 }

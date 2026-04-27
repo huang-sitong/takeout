@@ -41,8 +41,8 @@ public class EmployeeController {
     private EmployeeService employeeService;
     @Autowired
     private JwtProperties jwtProperties;
-    @Autowired
-    private EmployeeMapper employeeMapper;
+    /*@Autowired
+    private EmployeeMapper employeeMapper;*/
 
     /**
      * 登录
@@ -113,5 +113,32 @@ public class EmployeeController {
         log.info("员工分页查询参数为{}", employeePageQueryDTO);
         PageResult pageResult = employeeService.pageQuery(employeePageQueryDTO);
         return Result.success(pageResult);
+    }
+
+    /**
+     * 设置员工状态
+     * @param status
+     * @param id
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    @ApiOperation("设置员工状态")
+    public Result updateStatus(@PathVariable("status") Integer status, Long id) {
+        log.info("设置员工{} 状态为{}", id, status);
+        employeeService.updateStatus(status, id);
+        return Result.success();
+    }
+
+    /**
+     * 查询员工信息
+     * @param id
+     * @return
+     */
+    @GetMapping("/{id}")
+    @ApiOperation("查询员工信息")
+    public Result<Employee> getById(@PathVariable("id") Long id) {
+        log.info("查询员工：{} 的信息...", id);
+        Employee employee = employeeService.getById(id);
+        return Result.success(employee);
     }
 }
