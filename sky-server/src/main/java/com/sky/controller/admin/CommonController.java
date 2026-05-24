@@ -20,6 +20,7 @@ import java.util.UUID;
 @Api(tags = "通用相关接口")
 @Slf4j
 public class CommonController {
+
     @Autowired
     private AliOssUtil aliOssUtil;
 
