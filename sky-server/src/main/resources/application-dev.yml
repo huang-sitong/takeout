@@ -20,3 +20,7 @@ sky:
   wechat:
     appid: wx6d0f01e4406a6a97
     secret: fe678f99c5b2d508e91231974f9ff798
+  shop:
+    address: 桂林市灵川县灵田镇桂林电子科技大学花江校区
+  baidu:
+    ak: WlZyp6XyHUEgIUmuxT5bV2bUPIvSjkee
