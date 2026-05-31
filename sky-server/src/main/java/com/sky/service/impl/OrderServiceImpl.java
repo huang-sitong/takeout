@@ -451,7 +451,7 @@ public class OrderServiceImpl implements OrderService{
     private String detailList2String(List<OrderDetail> orderDetailList){
         String res = "";
         for(OrderDetail orderDetail : orderDetailList){
-            res += orderDetail.getName() + " * " + orderDetail.getNumber() + "; ";
+            res += orderDetail.getName() + "*" + orderDetail.getNumber() + ";";
         }
         return res;
     }
