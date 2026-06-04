@@ -9,6 +9,7 @@ import com.sky.service.DishService;
 import com.sky.vo.DishVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -114,6 +115,19 @@ public class DishController {
         log.info("根据分类id查询菜品:{}", categoryId);
         List<Dish> list = dishService.list(categoryId);
         return Result.success(list);
+    }
+
+    /**
+     * 菜品启用/停用
+     * @return
+     */
+    @PostMapping("status/{status}")
+    @ApiOperation("菜品启用/停用")
+    public Result setDishStatus(@PathVariable Integer status, Long id){
+        log.info("将菜品{}的状态设置为{}", id, status);
+        dishService.setDishStatus(status, id);
+        //deletCache("dish_*");
+        return Result.success();
     }
 
     /**

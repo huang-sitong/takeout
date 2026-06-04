@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface ShoppingCartMapper {
@@ -45,4 +46,10 @@ public interface ShoppingCartMapper {
      * @param shoppingCartList
      */
     void insertBatch(List<ShoppingCart> shoppingCartList);
+
+    /**
+     * 删除购物车中的一个商品
+     * @param map
+     */
+    void delBymap(Map map);
 }

@@ -9,9 +9,11 @@ import com.sky.context.BaseContext;
 import com.sky.dto.EmployeeDTO;
 import com.sky.dto.EmployeeLoginDTO;
 import com.sky.dto.EmployeePageQueryDTO;
+import com.sky.dto.PasswordEditDTO;
 import com.sky.entity.Employee;
 import com.sky.exception.AccountLockedException;
 import com.sky.exception.AccountNotFoundException;
+import com.sky.exception.BaseException;
 import com.sky.exception.PasswordErrorException;
 import com.sky.mapper.EmployeeMapper;
 import com.sky.result.PageResult;
@@ -128,6 +130,36 @@ public class EmployeeServiceImpl implements EmployeeService {
         BeanUtils.copyProperties(employeeDTO, employee);
         /*employee.setUpdateTime(LocalDateTime.now());
         employee.setUpdateUser(BaseContext.getCurrentId());*/
+        employeeMapper.updateEmployee(employee);
+    }
+
+    /**
+     * 修改密码
+     * @param passwordEditDTO
+     */
+    public void editPasswordById(PasswordEditDTO passwordEditDTO) {
+        Long empId = BaseContext.getCurrentId();
+/*        if(!empId.equals(passwordEditDTO.getEmpId())){
+            throw new PasswordErrorException("没有操作权限");
+        }*/
+        String oldPassword = passwordEditDTO.getOldPassword();
+        String newPassword = passwordEditDTO.getNewPassword();
+        if(oldPassword.equals(newPassword)){
+            throw new PasswordErrorException("相同的密码，无法修改");
+        }
+        //将old密码进行加密
+        oldPassword = DigestUtils.md5DigestAsHex(oldPassword.getBytes());
+        //获取用户信息
+        Employee employee = employeeMapper.getById(empId);
+        if(employee == null){
+            throw new AccountNotFoundException(MessageConstant.ACCOUNT_NOT_FOUND);
+        }else if(employee.getStatus() == StatusConstant.DISABLE){
+            throw new AccountLockedException(MessageConstant.ACCOUNT_LOCKED);
+        }else if(!oldPassword.equals(employee.getPassword())){
+            throw new PasswordErrorException(MessageConstant.PASSWORD_ERROR);
+        }
+        //确认可以修改
+        employee.setPassword(DigestUtils.md5DigestAsHex(newPassword.getBytes()));
         employeeMapper.updateEmployee(employee);
     }
 }

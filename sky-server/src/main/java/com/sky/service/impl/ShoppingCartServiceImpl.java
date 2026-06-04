@@ -5,6 +5,7 @@ import com.sky.dto.ShoppingCartDTO;
 import com.sky.entity.Dish;
 import com.sky.entity.Setmeal;
 import com.sky.entity.ShoppingCart;
+import com.sky.exception.BaseException;
 import com.sky.mapper.DishMapper;
 import com.sky.mapper.SetmealMapper;
 import com.sky.mapper.ShoppingCartMapper;
@@ -14,7 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ShoppingCartServiceImpl implements ShoppingCartService {
@@ -76,5 +79,25 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     public void clean() {
         Long userId = BaseContext.getCurrentId();
         shoppingCartMapper.cleanShoppingCart(userId);
+    }
+
+    /**
+     * 删除购物车中的一个商品
+     * @param shoppingCartDTO
+     */
+    public void subShoppingCart(ShoppingCartDTO shoppingCartDTO) {
+        Long userId = BaseContext.getCurrentId();
+        Long dishId = shoppingCartDTO.getDishId();
+        Long setmealId = shoppingCartDTO.getSetmealId();
+        if(userId == null){
+            throw new BaseException("无法获取用户id");
+        }else if(dishId == null && setmealId == null){
+            throw new BaseException("没有指定删除目标");
+        }
+        Map map = new HashMap();
+        map.put("userId", userId);
+        map.put("dishId", dishId);
+        map.put("setmealId", setmealId);
+        shoppingCartMapper.delBymap(map);
     }
 }
