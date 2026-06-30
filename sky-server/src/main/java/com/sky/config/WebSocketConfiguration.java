@@ -7,7 +7,8 @@ import org.springframework.web.socket.server.standard.ServerEndpointExporter;
 /**
  * WebSocket配置类，用于注册WebSocket的Bean
  */
-@Configuration
+// TODO: WebSocket 已停用，后续用 RocketMQ 消息推送替代
+// @Configuration
 public class WebSocketConfiguration {
 
     @Bean

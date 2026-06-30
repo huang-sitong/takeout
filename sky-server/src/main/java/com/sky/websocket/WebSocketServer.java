@@ -14,8 +14,9 @@ import java.util.Map;
 /**
  * WebSocket服务
  */
-@Component
-@ServerEndpoint("/ws/{sid}")
+// TODO: WebSocket 已停用，后续用 RocketMQ 消息推送替代
+// @Component
+// @ServerEndpoint("/ws/{sid}")
 public class WebSocketServer {
 
     //存放会话对象
