@@ -1,13 +1,16 @@
-一个基于 Spring Boot 的外卖点餐系统，包含管理端和用户端，支持微信小程序点餐、微信支付等功能。
+一个基于 Spring Boot + Spring Cloud Alibaba 的外卖点餐系统，包含管理端和用户端，支持微信小程序点餐、微信支付等功能。
 
 ## 项目简介
 
-苍穹外卖是一个完整的外卖点餐系统，采用前后端分离架构。后端提供 RESTful API，支持管理端（商家管理后台）和用户端（微信小程序）两种客户端。
+苍穹外卖是一个完整的外卖点餐系统，采用前后端分离 + 微服务架构。后端提供 RESTful API，支持管理端（商家管理后台）和用户端（微信小程序）两种客户端。
 
 ## 技术栈
 
 ### 后端技术
 - **核心框架**: Spring Boot 2.7.3
+- **微服务治理**: Spring Cloud 2021.0.9 + Spring Cloud Alibaba 2021.0.6.1
+- **注册中心 & 配置中心**: Nacos 2.2.3
+- **API 网关**: Spring Cloud Gateway
 - **持久层**: MyBatis 2.2.0
 - **数据库**: MySQL
 - **缓存**: Redis
@@ -19,6 +22,25 @@
 - **支付**: 微信支付
 - **其他**: Lombok, Fastjson, Apache POI
 
+### 微服务架构
+
+```
+浏览器 (:7999) ──▶ Nginx ──▶ sky-gateway (:8081) ──▶ sky-server (:8080)
+                                │                        │
+                                └──── Nacos (:8848) ─────┘
+                                         │
+                                    Config Center
+```
+
+| 服务 | 端口 | 说明 |
+|------|:----:|------|
+| Nginx (前端) | 7999 | 静态资源 + API 反向代理 |
+| sky-gateway | 8081 | API 网关，路由 + CORS + 负载均衡 |
+| sky-server | 8080 | 业务服务 (Controller/Service/Mapper) |
+| Nacos Server | 8848 | 注册中心 + 配置中心 |
+| MySQL | 3306 | 数据库 |
+| Redis | 6379 | 缓存 |
+
 ### 项目结构
 
 ```
@@ -29,22 +51,24 @@ sky-take-out
 │   ├── enumeration     # 枚举类
 │   ├── exception       # 自定义异常
 │   ├── json            # JSON配置
-│   ├── properties      # 配置属性类
+│   ├── properties      # 配置属性类 (@RefreshScope 支持动态刷新)
 │   ├── result          # 统一返回结果
 │   └── utils           # 工具类
 ├── sky-pojo            # 实体类模块
 │   ├── dto             # 数据传输对象
 │   ├── entity          # 实体类
 │   └── vo              # 视图对象
-└── sky-server          # 服务端模块
-    ├── config          # 配置类
-    ├── controller      # 控制器
-    │   ├── admin       # 管理端接口
-    │   └── user        # 用户端接口
-    ├── interceptor     # 拦截器
-    ├── mapper          # MyBatis Mapper接口
-    ├── service         # 业务逻辑层
-    └── websocket       # WebSocket服务
+├── sky-server          # 业务服务模块
+│   ├── config          # 配置类
+│   ├── controller      # 控制器
+│   │   ├── admin       # 管理端接口
+│   │   └── user        # 用户端接口
+│   ├── interceptor     # 拦截器
+│   ├── mapper          # MyBatis Mapper接口
+│   ├── service         # 业务逻辑层
+│   └── websocket       # WebSocket服务 (已停用，后续用RocketMQ替代)
+└── sky-gateway         # API 网关模块
+    └── GatewayApplication.java
 ```
 
 ## 功能特性
@@ -70,70 +94,69 @@ sky-take-out
 ## 快速开始
 
 ### 环境要求
-- JDK 8+
+- JDK 17+
 - Maven 3.6+
 - MySQL 5.7+
 - Redis 6.0+
+- Nacos Server 2.2.3 (Docker)
 
-### 数据库配置
-1. 创建数据库：
+### 1. 部署 Nacos Server
+```bash
+docker run -d \
+  --name nacos-server \
+  --restart=always \
+  -p 8848:8848 \
+  -p 9848:9848 \
+  -p 9849:9849 \
+  -e MODE=standalone \
+  -e PREFER_HOST_MODE=hostname \
+  nacos/nacos-server:v2.2.3
+```
+
+启动后访问 http://127.0.0.1:8848/nacos，默认账号 `nacos/nacos`。
+
+### 2. 创建 Nacos 配置
+在 Nacos 控制台 → 配置管理 → 配置列表 → 新建配置：
+- **Data ID**: `sky-server-dev.yaml`
+- **Group**: `DEFAULT_GROUP`
+- **配置格式**: YAML
+- **配置内容**: 参考 `docs/nacos-config-sky-server-dev.yaml` 模板填入实际的数据库/Redis/OSS/微信配置值
+
+### 3. 数据库配置
 ```sql
 CREATE DATABASE sky_take_out;
 ```
-
-2. 执行 SQL 脚本：
+执行 SQL 脚本：
 ```bash
 mysql -u root -p sky_take_out < .sql/sky.sql
 ```
 
-### 应用配置
-在 `application-dev.yml` 中配置以下参数：
+### 4. 启动服务
 
-```yaml
-sky:
-  datasource:
-    host: localhost
-    port: 3306
-    database: sky_take_out
-    username: root
-    password: your_password
-  redis:
-    host: localhost
-    port: 6379
-    password: your_redis_password
-    database: 0
-  alioss:
-    endpoint: oss-cn-beijing.aliyuncs.com
-    access-key-id: your_access_key_id
-    access-key-secret: your_access_key_secret
-    bucket-name: your_bucket_name
-  wechat:
-    appid: your_wechat_appid
-    secret: your_wechat_secret
-  shop:
-    address: your_shop_address
-  baidu:
-    ak: your_baidu_ak
-```
+确保 `JAVA_HOME` 指向 JDK 17：
 
-### 运行项目
 ```bash
-# 克隆项目
-git clone https://github.com/your-username/sky-take-out.git
+# 终端1：启动 sky-server
+mvn -pl sky-server spring-boot:run
 
-# 进入项目目录
-cd sky-take-out
-
-# 编译打包
-mvn clean package
-
-# 运行项目
-java -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar
+# 终端2：启动 sky-gateway
+mvn -pl sky-gateway spring-boot:run
 ```
 
-### 访问接口文档
-启动项目后，访问 Knife4j 接口文档：
-- 管理端接口: http://localhost:8080/doc.html
+启动顺序：先 Nacos → MySQL → Redis → sky-server → sky-gateway → Nginx。
+
+### 5. 配置前端 Nginx
+将 Nginx 反向代理目标指向 gateway 端口 `8081`：
+```nginx
+upstream webservers {
+    server 127.0.0.1:8081 weight=90;
+}
+```
+
+### 6. 验证
+- Nacos 控制台 → 服务列表：`sky-server` 和 `sky-gateway` 均已注册
+- 浏览器访问 `http://localhost:7999` 测试前端功能
+- 接口文档: http://localhost:8080/doc.html
 
 ## 接口说明
 

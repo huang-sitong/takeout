@@ -49,5 +49,10 @@
             <groupId>com.github.wechatpay-apiv3</groupId>
             <artifactId>wechatpay-apache-httpclient</artifactId>
         </dependency>
+        <!-- Spring Cloud Context (提供 @RefreshScope 支持配置动态刷新) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-context</artifactId>
+        </dependency>
     </dependencies>
 </project>
