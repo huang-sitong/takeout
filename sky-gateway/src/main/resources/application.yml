@@ -23,3 +23,17 @@ spring:
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
+    sentinel:
+      transport:
+        dashboard: localhost:8858
+        port: 8720
+      eager: true
+      datasource:
+        flow:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            username: nacos
+            password: nacos
+            dataId: sky-gateway-flow-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: gw-flow

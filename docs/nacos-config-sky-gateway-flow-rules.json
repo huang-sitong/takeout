@@ -1,0 +1,11 @@
+[
+  {
+    "resource": "sky-server-route",
+    "resourceMode": 0,
+    "grade": 1,
+    "count": 100,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "clusterMode": false
+  }
+]

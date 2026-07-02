@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Environment
 
 - **JDK 17** required — JDK 24 breaks Lombok (`@Data`/`@Builder` annotation processing fails). `JAVA_HOME` must point to JDK 17.
-- Maven 3.6+, MySQL 5.7+, Redis 6.0+, Nacos 2.2.3 (Docker standalone)
+- Maven 3.6+, MySQL 5.7+, Redis 6.0+, Nacos 2.2.3 (Docker standalone), Sentinel Dashboard 1.8.6 (WSL jar，port 8858，脚本见 `docker/sentinel-dashboard/`)
 
 ## Build & Run
 
@@ -17,10 +17,10 @@ mvn install -DskipTests
 mvn install -DskipTests -pl sky-server -am
 
 # Start sky-server (port 8080)
-mvn -pl sky-server spring-boot:run
+mvn -pl sky-server spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
 
 # Start sky-gateway (port 8081)
-mvn -pl sky-gateway spring-boot:run
+mvn -pl sky-gateway spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
 
 # Dependency tree
 mvn dependency:tree -pl sky-server
@@ -42,7 +42,9 @@ No Maven wrapper (`mvnw`) — use system `mvn`.
 ```
 Nginx (:7999) → sky-gateway (:8081) → lb://sky-server (:8080)
                       ↓                        ↓
-                   Nacos (:8848) ←── 注册 + 配置 ──┘
+                   Nacos (:8848) ←── 注册 + 配置 + Sentinel 规则 ──┘
+                      ↑
+              Sentinel Dashboard (:8858) ← 客户端上报 + 规则推送
 ```
 
 JWT authentication stays in **sky-server** (interceptors), not in the gateway. The gateway only does routing, CORS, and load balancing.
@@ -66,14 +68,28 @@ Each controller package has two facets:
 - sky-server uses `bootstrap.yml` to connect to Nacos (requires the explicit `spring-cloud-starter-bootstrap` dependency — Spring Boot 2.7.x disables bootstrap by default).
 - Properties beans (`AliOssProperties`, `JwtProperties`, `WeChatProperties`) are annotated with `@RefreshScope` for hot reload.
 
+### Sentinel 流控熔断 (#2 期已完成)
+- **两层限流**：Gateway 层按路由资源 `sky-server-route` 全局 100 QPS；sky-server 层用 `@SentinelResource` 标 7 个核心写接口各 5 QPS。
+- **熔断策略**：慢调用 (RT>300ms) + 异常比例 (>50%) 各 1 条 degrade 规则，窗口 10s，minRequestAmount=5。
+- **受保护接口 resource 名**：`submitOrder`/`payOrder`/`userCancelOrder`/`confirmOrder`/`rejectOrder`/`adminCancelOrder`/`completeOrder` (在 `user.OrderController` 与 `admin.OrderController` 上)。
+- **异常处理统一返回**：`com.sky.handler.SentinelBlockHandler` (sky-server, 静态方法, `@SentinelResource(blockHandlerClass=..., blockHandler=...)`) 和 `com.sky.gateway.config.SentinelGatewayConfiguration` (gateway, `BlockRequestHandler` 返回 HTTP 429 + Result JSON)。都返回 `Result{code:0, msg:...}` 与项目响应结构一致。
+- **规则持久化到 Nacos**：4 份规则 JSON 在 Nacos，模板见 `docs/`：
+  - `sky-server-flow-rules.json` / `sky-server-degrade-rules.json` (sky-server 通过 `spring.cloud.sentinel.datasource` 拉取)
+  - `sky-gateway-flow-rules.json` (gateway 同上，`rule-type: gw-flow`)
+  - sky-server 的 Sentinel 配置写在 `sky-server-dev.yaml` 的 `spring.cloud.sentinel.*`；gateway 写在 `sky-gateway/src/main/resources/application.yml`。
+- **`@SentinelResource` 的 blockHandlerClass 方法必须 static**，否则 BlockException 被当 500 上抛。
+- **Sentinel Dashboard 非强依赖**：规则在客户端启动时从 Nacos 拉到内存，Dashboard 仅用于实时监控与规则推送；Dashboard 进程不存在不影响限流功能。
+
 ## Constraints & Warnings
 
 - **Gateway must NOT depend on `spring-boot-starter-web`** (Tomcat) — it's WebFlux/Netty only. Gateway module is self-contained; it does not depend on sky-server.
 - **WebSocket is disabled** (`WebSocketConfiguration`, `WebSocketServer`, and `OrderServiceImpl` calls are commented out). It will be replaced by RocketMQ in a future phase. Do not re-enable it.
 - **Nacos startup order**: Nacos Server must be running with configs created before sky-server starts, or bootstrap will fail.
+- **Windows JVM `file.encoding` pitfall**: Windows JDK 17 defaults to GBK, which causes Nacos Config client to decode the UTF-8 YAML content as mojibake and fail YAML parsing. **sky-server & sky-gateway must be launched with `-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8`** (already in the run commands above). `application-dev.yml` in the repo is intentionally empty — content lives in Nacos.
 - **JDK 24 is incompatible** — always verify `java -version` before Maven commands.
 - Sensitive config (credentials, AKSK) belongs in Nacos or the local `docs/` template — never committed. `application-dev.yml` and `docs/` are gitignored.
 - `spring-cloud-starter-loadbalancer` is an **explicit** dependency in sky-gateway (optional in Gateway 3.1.x, but `lb://` breaks without it).
+- **`spring-cloud-alibaba-sentinel-gateway` 适配包必须显式声明** in sky-gateway — the starter `spring-cloud-starter-alibaba-sentinel` does NOT pull it transitively. Without it, `com.alibaba.csp.sentinel.adapter.gateway.sc.callback.*` classes are missing and Gateway 限流编译失败.
 
 ## Dependencies Managed by BOM
 
@@ -83,4 +99,8 @@ Do not specify versions for Spring Cloud, Spring Cloud Alibaba, or their transit
 
 ## TODO: Future Phases
 
-See `.others/后续阶段TODO.md` for the roadmap: Sentinel (#2) → Seata (#3) → RocketMQ (#4) → Docker (#5) → K8s (#6).
+See `.others/后续阶段TODO.md` for the roadmap. Completed:
+- #1 期 (Gateway + Nacos) ✅
+- #2 期 (Sentinel 流控熔断) ✅
+
+Remaining: Seata (#3) → RocketMQ (#4) → Docker (#5) → K8s (#6).

@@ -9,6 +9,8 @@ import com.sky.result.Result;
 import com.sky.service.OrderService;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderVO;
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.sky.handler.SentinelBlockHandler;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -68,6 +70,7 @@ public class OrderController {
      */
     @PutMapping("/confirm")
     @ApiOperation("接单")
+    @SentinelResource(value = "confirmOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "confirmOrder")
     public Result confirm(@RequestBody OrdersConfirmDTO ordersConfirmDTO) {
         orderService.confirm(ordersConfirmDTO);
         return Result.success();
@@ -79,6 +82,7 @@ public class OrderController {
      */
     @PutMapping("/rejection")
     @ApiOperation("拒单")
+    @SentinelResource(value = "rejectOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "rejectOrder")
     public Result rejection(@RequestBody OrdersRejectionDTO ordersRejectionDTO) throws Exception {
         orderService.rejection(ordersRejectionDTO);
         return Result.success();
@@ -90,6 +94,7 @@ public class OrderController {
      */
     @PutMapping("/cancel")
     @ApiOperation("取消订单")
+    @SentinelResource(value = "adminCancelOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "adminCancelOrder")
     public Result cancel(@RequestBody OrdersCancelDTO ordersCancelDTO) throws Exception {
         orderService.cancel(ordersCancelDTO);
         return Result.success();
@@ -114,6 +119,7 @@ public class OrderController {
      */
     @PutMapping("/complete/{id}")
     @ApiOperation("完成订单")
+    @SentinelResource(value = "completeOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "completeOrder")
     public Result complete(@PathVariable("id") Long id) {
         orderService.complete(id);
         return Result.success();
