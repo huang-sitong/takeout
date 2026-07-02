@@ -16,11 +16,17 @@ mvn install -DskipTests
 # Build a module and its dependencies
 mvn install -DskipTests -pl sky-server -am
 
+# ★ 仅 Windows 原生 JDK 需要：设置 JVM 编码为 UTF-8（Linux/WSL/macOS 默认就是 UTF-8，无需此步骤）
+#   Git Bash / PowerShell：
+export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+#   PowerShell:
+$env:JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+
 # Start sky-server (port 8080)
-mvn -pl sky-server spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+mvn -pl sky-server spring-boot:run
 
 # Start sky-gateway (port 8081)
-mvn -pl sky-gateway spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+mvn -pl sky-gateway spring-boot:run
 
 # Dependency tree
 mvn dependency:tree -pl sky-server
@@ -85,7 +91,7 @@ Each controller package has two facets:
 - **Gateway must NOT depend on `spring-boot-starter-web`** (Tomcat) — it's WebFlux/Netty only. Gateway module is self-contained; it does not depend on sky-server.
 - **WebSocket is disabled** (`WebSocketConfiguration`, `WebSocketServer`, and `OrderServiceImpl` calls are commented out). It will be replaced by RocketMQ in a future phase. Do not re-enable it.
 - **Nacos startup order**: Nacos Server must be running with configs created before sky-server starts, or bootstrap will fail.
-- **Windows JVM `file.encoding` pitfall**: Windows JDK 17 defaults to GBK, which causes Nacos Config client to decode the UTF-8 YAML content as mojibake and fail YAML parsing. **sky-server & sky-gateway must be launched with `-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8`** (already in the run commands above). `application-dev.yml` in the repo is intentionally empty — content lives in Nacos.
+- **Windows JVM `file.encoding` pitfall**: Windows 原生 JDK 17 默认编码为 GBK，而 Nacos 中的 YAML 配置为 UTF-8，编码不一致会导致 YAML 解析失败。**仅 Windows 原生 JDK 需要**在启动前设置 `JAVA_TOOL_OPTIONS`（Git Bash / PowerShell: `$env:`），Linux / WSL / macOS 默认已是 UTF-8，无需此步骤。`application-dev.yml` in the repo is intentionally empty — content lives in Nacos.
 - **JDK 24 is incompatible** — always verify `java -version` before Maven commands.
 - Sensitive config (credentials, AKSK) belongs in Nacos or the local `docs/` template — never committed. `application-dev.yml` and `docs/` are gitignored.
 - `spring-cloud-starter-loadbalancer` is an **explicit** dependency in sky-gateway (optional in Gateway 3.1.x, but `lb://` breaks without it).

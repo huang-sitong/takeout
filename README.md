@@ -163,14 +163,22 @@ mysql -u root -p sky_take_out < .sql/sky.sql
 
 ### 5. 启动服务
 
-确保 `JAVA_HOME` 指向 JDK 17。**Windows 上必须加 `-Dfile.encoding=UTF-8`**（否则 Nacos 配置中的中文会被按 GBK 解码成乱码，导致 YAML 解析失败）：
+确保 `JAVA_HOME` 指向 JDK 17。
+
+> **仅 Windows 原生 JDK 需要**：先设置 JVM 编码为 UTF-8（Windows 默认 GBK 与 Nacos UTF-8 配置不一致会导致启动失败）。Linux / WSL / macOS 默认已是 UTF-8，跳过此步骤即可。
+
+每个终端窗口只需设置一次，后续所有 `mvn` / `java` 命令都会自动继承：
 
 ```bash
+# Git Bash / PowerShell（仅 Windows 原生 JDK 需要）:
+export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"   # Git Bash
+$env:JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"     # PowerShell
+
 # 终端1：启动 sky-server
-mvn -pl sky-server spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+mvn -pl sky-server spring-boot:run
 
 # 终端2：启动 sky-gateway
-mvn -pl sky-gateway spring-boot:run -Dspring-boot.run.jvmArguments="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
+mvn -pl sky-gateway spring-boot:run
 ```
 
 启动顺序：Nacos → MySQL → Redis → (可选 Sentinel Dashboard) → sky-server → sky-gateway → Nginx。
