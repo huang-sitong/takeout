@@ -1,0 +1,55 @@
+# ============================================================
+# Seata Server 1.5.x 配置文件
+# 挂载到容器内 /seata-server/resources/application.yml
+# ============================================================
+
+server:
+  port: 7091
+
+spring:
+  application:
+    name: seata-server
+
+logging:
+  level:
+    io.seata: info
+
+seata:
+  config:
+    type: nacos
+    nacos:
+      server-addr: host.docker.internal:8848
+      namespace: ""
+      group: SEATA_GROUP
+      username: nacos
+      password: nacos
+  registry:
+    type: nacos
+    nacos:
+      application: seata-server
+      server-addr: host.docker.internal:8848
+      namespace: ""
+      group: SEATA_GROUP
+      username: nacos
+      password: nacos
+  store:
+    mode: db
+    db:
+      datasource: druid
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://host.docker.internal:3306/seata?useUnicode=true&characterEncoding=utf8&allowPublicKeyRetrieval=true&useSSL=false
+      user: root
+      password: 123456
+  server:
+    service-port: 8091
+
+  # Seata 控制台认证 (http://localhost:7091)
+  security:
+    secretKey: SeataSecretKey0c382ef121d778043159209298fd40bf3850a017
+    tokenValidityInMilliseconds: 1800000
+
+console:
+  user:
+    username: seata
+    password: seata

@@ -27,6 +27,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import io.seata.spring.annotation.GlobalTransactional;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -63,6 +64,7 @@ public class OrderServiceImpl implements OrderService{
      * @param ordersSubmitDTO
      * @return
      */
+    @GlobalTransactional(name = "submitOrder", timeoutMills = 60000)
     @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO){
         //地址不能为空
@@ -127,6 +129,8 @@ public class OrderServiceImpl implements OrderService{
      * @param ordersPaymentDTO
      * @return
      */
+    @GlobalTransactional(name = "payment", timeoutMills = 60000)
+    @Transactional
     public OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO) throws Exception {
         /*
         // 当前登录用户id

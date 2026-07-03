@@ -61,6 +61,17 @@ spring:
             groupId: DEFAULT_GROUP
             rule-type: degrade
 
+# ============================================================
+# Seata 分布式事务配置 (#3 期)
+# ============================================================
+# 注意：seata.registry 和 seata.config 已在 bootstrap.yml 中配置，
+# 以下为可选覆盖项。tx-service-group 必须与 seata-server 的 vgroup-mapping 一致。
+# seata:
+#   tx-service-group: sky-server-group
+#   service:
+#     vgroup-mapping:
+#       sky-server-group: default
+
 sky:
   jwt:
     admin-secret-key: <your-jwt-admin-secret-key>

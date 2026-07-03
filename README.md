@@ -12,6 +12,7 @@
 - **注册中心 & 配置中心**: Nacos 2.2.3
 - **API 网关**: Spring Cloud Gateway
 - **流量控制 & 熔断降级**: Sentinel 1.8.6 (两层限流 + 慢调用/异常比例熔断)
+- **分布式事务**: Seata 1.5.2 (AT 模式，DataSourceProxy + undo_log)
 - **持久层**: MyBatis 2.2.0
 - **数据库**: MySQL
 - **缓存**: Redis
@@ -32,6 +33,9 @@
                                 └──── Nacos (:8848) ──────┘
                                          │      ↑
                                   注册+配置+规则  Sentinel Dashboard (:8858)
+                                         │
+                                    Seata Server (:8091)
+                                  分布式事务协调器 (TC)
 ```
 
 | 服务 | 端口 | 说明 |
@@ -41,6 +45,7 @@
 | sky-server | 8080 | 业务服务 (Controller/Service/Mapper) + 限流熔断 |
 | Nacos Server | 8848 | 注册中心 + 配置中心 + Sentinel 规则存储 |
 | Sentinel Dashboard | 8858 | 流控规则推送 + 实时监控 (可选，非强依赖) |
+| Seata Server | 8091 | 分布式事务协调器 TC (可选，非强依赖) |
 | MySQL | 3306 | 数据库 |
 | Redis | 6379 | 缓存 |
 

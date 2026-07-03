@@ -23,10 +23,14 @@ export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
 $env:JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
 
 # Start sky-server (port 8080)
+# JVM args (--add-opens for Seata) are configured in sky-server/pom.xml spring-boot-maven-plugin
 mvn -pl sky-server spring-boot:run
 
 # Start sky-gateway (port 8081)
 mvn -pl sky-gateway spring-boot:run
+
+# Start sky-server as JAR (production):
+# java --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar
 
 # Dependency tree
 mvn dependency:tree -pl sky-server
@@ -49,8 +53,10 @@ No Maven wrapper (`mvnw`) — use system `mvn`.
 Nginx (:7999) → sky-gateway (:8081) → lb://sky-server (:8080)
                       ↓                        ↓
                    Nacos (:8848) ←── 注册 + 配置 + Sentinel 规则 ──┘
-                      ↑
-              Sentinel Dashboard (:8858) ← 客户端上报 + 规则推送
+                      ↑                        │
+              Sentinel Dashboard (:8858)       │
+                                        Seata Server (:8091)
+                                        分布式事务协调 (TC)
 ```
 
 JWT authentication stays in **sky-server** (interceptors), not in the gateway. The gateway only does routing, CORS, and load balancing.
@@ -86,6 +92,14 @@ Each controller package has two facets:
 - **`@SentinelResource` 的 blockHandlerClass 方法必须 static**，否则 BlockException 被当 500 上抛。
 - **Sentinel Dashboard 非强依赖**：规则在客户端启动时从 Nacos 拉到内存，Dashboard 仅用于实时监控与规则推送；Dashboard 进程不存在不影响限流功能。
 
+### Seata 分布式事务 (#3 期已完成)
+- **AT 模式**：`DataSourceProxy` 包装 Druid DataSource，自动生成 undo_log（前后镜像），异常时 TC 协调自动回滚。
+- **Seata Server**：Docker 部署 `seataio/seata-server:1.5.2`，store.mode=db（数据库 `seata`），注册到 Nacos（group: `SEATA_GROUP`）。
+- **客户端配置**：`seata.tx-service-group=sky-server-group` 在 `bootstrap.yml`；`@GlobalTransactional` 标注在 `OrderServiceImpl.submitOrder()` 和 `payment()`。
+- **数据库表**：`seata` 库 4 张（global_table, branch_table, lock_table, distributed_lock）+ `sky_take_out` 库 1 张（undo_log，含 `ext` 列）。
+- **与 Sentinel 分层**：`@SentinelResource` 在 Controller 层，`@GlobalTransactional` 在 Service 层，避免 AOP 代理链冲突。
+- **Seata Server 非强依赖**：Seata Server 不可用时，`@Transactional` 仍可保证本地事务（但全局事务降级为本地事务）。
+
 ## Constraints & Warnings
 
 - **Gateway must NOT depend on `spring-boot-starter-web`** (Tomcat) — it's WebFlux/Netty only. Gateway module is self-contained; it does not depend on sky-server.
@@ -93,9 +107,12 @@ Each controller package has two facets:
 - **Nacos startup order**: Nacos Server must be running with configs created before sky-server starts, or bootstrap will fail.
 - **Windows JVM `file.encoding` pitfall**: Windows 原生 JDK 17 默认编码为 GBK，而 Nacos 中的 YAML 配置为 UTF-8，编码不一致会导致 YAML 解析失败。**仅 Windows 原生 JDK 需要**在启动前设置 `JAVA_TOOL_OPTIONS`（Git Bash / PowerShell: `$env:`），Linux / WSL / macOS 默认已是 UTF-8，无需此步骤。`application-dev.yml` in the repo is intentionally empty — content lives in Nacos.
 - **JDK 24 is incompatible** — always verify `java -version` before Maven commands.
+- **Seata requires JDK module opens**: `sky-server/pom.xml` 的 `spring-boot-maven-plugin` 已配置 `--add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED`。生产环境 `java -jar` 部署时需手动添加这两个 JVM 参数，否则 Seata 反射访问 `java.lang.reflect.Proxy.h` 会抛 `InaccessibleObjectException`。
 - Sensitive config (credentials, AKSK) belongs in Nacos or the local `docs/` template — never committed. `application-dev.yml` and `docs/` are gitignored.
 - `spring-cloud-starter-loadbalancer` is an **explicit** dependency in sky-gateway (optional in Gateway 3.1.x, but `lb://` breaks without it).
 - **`spring-cloud-alibaba-sentinel-gateway` 适配包必须显式声明** in sky-gateway — the starter `spring-cloud-starter-alibaba-sentinel` does NOT pull it transitively. Without it, `com.alibaba.csp.sentinel.adapter.gateway.sc.callback.*` classes are missing and Gateway 限流编译失败.
+- **Seata Server 启动顺序**：Seata Server 应在 sky-server 之前启动（否则 `@GlobalTransactional` 事务会降级为本地事务）。启动顺序：Nacos → MySQL → Seata Server → sky-server → sky-gateway。
+- **DataSourceProxy 不可重复代理**：`SeataDataSourceConfig` 用 `@Primary` 包装 Druid DataSource，确保 MyBatis 使用代理后的连接；不要在别处再次包装 DataSourceProxy。
 
 ## Dependencies Managed by BOM
 
@@ -108,5 +125,6 @@ Do not specify versions for Spring Cloud, Spring Cloud Alibaba, or their transit
 See `.others/后续阶段TODO.md` for the roadmap. Completed:
 - #1 期 (Gateway + Nacos) ✅
 - #2 期 (Sentinel 流控熔断) ✅
+- #3 期 (Seata 分布式事务) ✅
 
-Remaining: Seata (#3) → RocketMQ (#4) → Docker (#5) → K8s (#6).
+Remaining: RocketMQ (#4) → Docker (#5) → K8s (#6).
