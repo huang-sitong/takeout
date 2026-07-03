@@ -5,7 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Environment
 
 - **JDK 17** required — JDK 24 breaks Lombok (`@Data`/`@Builder` annotation processing fails). `JAVA_HOME` must point to JDK 17.
-- Maven 3.6+, MySQL 5.7+, Redis 6.0+, Nacos 2.2.3 (Docker standalone), Sentinel Dashboard 1.8.6 (WSL jar，port 8858，脚本见 `docker/sentinel-dashboard/`)
+- Maven 3.6+, MySQL 5.7+ (Windows 原生服务)
+- **Docker Desktop** required — 基础设施通过 `docker compose` 管理（见下方 Infrastructure 节）
 
 ## Build & Run
 
@@ -35,6 +36,53 @@ mvn -pl sky-gateway spring-boot:run
 # Dependency tree
 mvn dependency:tree -pl sky-server
 ```
+
+## Infrastructure (Docker Compose)
+
+```bash
+# Start all infrastructure containers
+docker compose up -d
+
+# Stop all
+docker compose down
+
+# Status
+docker compose ps
+
+# View logs of a specific service
+docker compose logs -f nacos
+docker compose logs -f seata
+```
+
+### Service ports
+
+| Service | Port | Credentials |
+|---------|------|-------------|
+| Nacos | `:8848` (console), `:9848` (gRPC) | **无认证** (开发环境) |
+| Redis | `:6379` | password: `123456` |
+| Seata | `:8091` (TC), `:7091` (console) | console: `seata` / `seata` |
+| Sentinel Dashboard | `:8858` | `sentinel` / `sentinel` |
+| MySQL | `:3306` (Windows 原生) | root / `123456` |
+
+### Container details
+
+| Container | Image | Notes |
+|-----------|-------|-------|
+| `sky-nacos` | `nacos/nacos-server:v2.2.3` | 单机模式，MySQL 后端 (`nacos_config` 库)，认证关闭 |
+| `sky-redis` | `redis:7-alpine` | AOF 持久化，命名卷 `redis-data` |
+| `sky-seata` | `seataio/seata-server:1.5.2` | AT 模式，注册到 Nacos，配置挂载 `docker/seata-server/application.yml` |
+| `sky-sentinel` | `sky-sentinel-dashboard:1.8.6` | 本地构建 (`docker/sentinel-dashboard/Dockerfile`) |
+
+### Nacos config initialization
+
+Nacos 配置需要在 MySQL 中预先创建 `nacos_config` 数据库并执行 `.sql/nacos-mysql.sql`。首次使用需在 Nacos 控制台 `http://localhost:8848/nacos` 导入 4 个配置文件：
+
+| Data ID | 格式 | 来源 |
+|---------|------|------|
+| `sky-server-dev.yaml` | YAML | `.others/docs/nacos-config-sky-server-dev.yaml` |
+| `sky-server-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-server-flow-rules.json` |
+| `sky-server-degrade-rules.json` | JSON | `.others/docs/nacos-config-sky-server-degrade-rules.json` |
+| `sky-gateway-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-gateway-flow-rules.json` |
 
 No Maven wrapper (`mvnw`) — use system `mvn`.
 

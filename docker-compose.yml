@@ -1,0 +1,117 @@
+# ============================================================
+# 苍穹外卖 — 基础设施 Docker Compose 编排
+# ============================================================
+# 启动: docker compose up -d
+# 停止: docker compose down
+# 状态: docker compose ps
+# 日志: docker compose logs -f [service]
+# ============================================================
+
+services:
+  # ============================================================
+  # Redis 缓存服务
+  # ============================================================
+  redis:
+    image: redis:7-alpine
+    container_name: sky-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass 123456
+    volumes:
+      - redis-data:/data
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ============================================================
+  # Nacos 注册中心 + 配置中心
+  # ============================================================
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: sky-nacos
+    restart: always
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+    environment:
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=mysql
+      - MYSQL_SERVICE_HOST=host.docker.internal
+      - MYSQL_SERVICE_PORT=3306
+      - MYSQL_SERVICE_DB_NAME=nacos_config
+      - MYSQL_SERVICE_USER=root
+      - MYSQL_SERVICE_PASSWORD=123456
+      - NACOS_AUTH_ENABLE=false
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ============================================================
+  # Seata Server 分布式事务协调器
+  # ============================================================
+  seata:
+    image: seataio/seata-server:1.5.2
+    container_name: sky-seata
+    restart: always
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    volumes:
+      - ./docker/seata-server/application.yml:/seata-server/resources/application.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:7091 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  # ============================================================
+  # Sentinel Dashboard 流量控制控制台
+  # ============================================================
+  sentinel:
+    build:
+      context: ./docker/sentinel-dashboard
+      dockerfile: Dockerfile
+    image: sky-sentinel-dashboard:1.8.6
+    container_name: sky-sentinel
+    restart: always
+    ports:
+      - "8858:8858"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8858 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+
+volumes:
+  redis-data:
+
+networks:
+  sky-net:
+    driver: bridge

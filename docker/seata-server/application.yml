@@ -21,8 +21,7 @@ seata:
       server-addr: host.docker.internal:8848
       namespace: ""
       group: SEATA_GROUP
-      username: nacos
-      password: nacos
+      # username/password 省略 — Nacos 已关闭认证
   registry:
     type: nacos
     nacos:
@@ -30,8 +29,6 @@ seata:
       server-addr: host.docker.internal:8848
       namespace: ""
       group: SEATA_GROUP
-      username: nacos
-      password: nacos
   store:
     mode: db
     db:
