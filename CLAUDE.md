@@ -174,5 +174,6 @@ See `.others/后续阶段TODO.md` for the roadmap. Completed:
 - #1 期 (Gateway + Nacos) ✅
 - #2 期 (Sentinel 流控熔断) ✅
 - #3 期 (Seata 分布式事务) ✅
+- #5 期 基础设施容器化 (Docker Compose) ✅
 
-Remaining: RocketMQ (#4) → Docker (#5) → K8s (#6).
+Remaining: RocketMQ (#4) → 应用容器化 (#5.1-#5.5) → K8s (#6).

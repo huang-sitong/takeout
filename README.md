@@ -115,39 +115,41 @@ sky-take-out
 - JDK 17+
 - Maven 3.6+
 - MySQL 5.7+
-- Redis 6.0+
-- Nacos Server 2.2.3 (Docker)
-- Sentinel Dashboard 1.8.6 (WSL 运行 jar 包，可选但推荐)
+- **Docker Desktop** — 基础设施通过 Docker Compose 统一管理
 
-### 1. 部署 Nacos Server
+### 1. 初始化基础设施
+
+**前置条件**：在 MySQL 中创建数据库并执行初始化脚本：
+
+```sql
+CREATE DATABASE IF NOT EXISTS nacos_config DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+CREATE DATABASE IF NOT EXISTS seata;
+```
 ```bash
-docker run -d \
-  --name nacos-server \
-  --restart=always \
-  -p 8848:8848 \
-  -p 9848:9848 \
-  -p 9849:9849 \
-  -e MODE=standalone \
-  -e PREFER_HOST_MODE=hostname \
-  nacos/nacos-server:v2.2.3
+mysql -u root -p < .sql/nacos-mysql.sql   # Nacos 配置持久化表
+mysql -u root -p < .sql/seata.sql         # Seata AT 模式表
 ```
 
-启动后访问 http://127.0.0.1:8848/nacos，默认账号 `nacos/nacos`。
+**启动所有基础设施容器**（Nacos + Redis + Seata + Sentinel）：
 
-### 2. 部署 Sentinel Dashboard
-本项目 Sentinel Dashboard 通过 `docker/sentinel-dashboard/` 目录的脚本在 WSL 中直接运行 jar 包。
-
-在 WSL 中执行：
 ```bash
-cd /mnt/e/java/sky-take-out/docker/sentinel-dashboard
-./start.sh         # 启动 (后台运行，日志写入 /tmp/sentinel.log)
-./status.sh        # 查看运行状态
-./stop.sh          # 停止
+docker compose up -d
 ```
-启动后访问 http://localhost:8858/，默认账号 `sentinel/sentinel`。
-> Dashboard 仅用于实时监控和规则推送，**非强依赖** — 规则持久化在 Nacos，Dashboard 不启动也能限流。
 
-### 3. 创建 Nacos 配置
+| 容器 | 端口 | 说明 |
+|------|:----:|------|
+| `sky-nacos` | `:8848` (console), `:9848` (gRPC) | 无认证 (开发环境)，MySQL 后端持久化 |
+| `sky-redis` | `:6379` | AOF 持久化，密码 `123456` |
+| `sky-seata` | `:8091` (TC), `:7091` (console) | console `seata/seata`，注册到 Nacos |
+| `sky-sentinel` | `:8858` | 本地构建，`sentinel/sentinel`，非强依赖 |
+
+```bash
+docker compose ps          # 查看状态
+docker compose logs -f     # 查看日志
+docker compose down        # 停止所有
+```
+
+### 2. 创建 Nacos 配置
 在 Nacos 控制台 → 配置管理 → 配置列表 → 新建/编辑以下配置（模板见 `docs/` 目录）：
 
 | Data ID | Group | 格式 | 说明 |
@@ -157,7 +159,7 @@ cd /mnt/e/java/sky-take-out/docker/sentinel-dashboard
 | `sky-server-degrade-rules.json` | `DEFAULT_GROUP` | JSON | sky-server 熔断规则 (慢调用 + 异常比例) |
 | `sky-gateway-flow-rules.json` | `DEFAULT_GROUP` | JSON | gateway 全局限流规则 (路由 100 QPS) |
 
-### 4. 数据库配置
+### 3. 数据库配置
 ```sql
 CREATE DATABASE sky_take_out;
 ```
@@ -166,7 +168,7 @@ CREATE DATABASE sky_take_out;
 mysql -u root -p sky_take_out < .sql/sky.sql
 ```
 
-### 5. 启动服务
+### 4. 启动服务
 
 确保 `JAVA_HOME` 指向 JDK 17。
 
@@ -186,9 +188,9 @@ mvn -pl sky-server spring-boot:run
 mvn -pl sky-gateway spring-boot:run
 ```
 
-启动顺序：Nacos → MySQL → Redis → (可选 Sentinel Dashboard) → sky-server → sky-gateway → Nginx。
+启动顺序：MySQL → `docker compose up -d` (Nacos/Redis/Seata/Sentinel) → sky-server → sky-gateway → Nginx。
 
-### 6. 配置前端 Nginx
+### 5. 配置前端 Nginx
 将 Nginx 反向代理目标指向 gateway 端口 `8081`：
 ```nginx
 upstream webservers {
@@ -196,7 +198,7 @@ upstream webservers {
 }
 ```
 
-### 7. 验证
+### 6. 验证
 - Nacos 控制台 → 服务列表：`sky-server` 和 `sky-gateway` 均已注册
 - Sentinel Dashboard (若已启动) → 可看到两个客户端实时监控
 - 浏览器访问 `http://localhost:7999` 测试前端功能
