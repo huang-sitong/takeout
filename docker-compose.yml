@@ -89,6 +89,71 @@ services:
         condition: service_healthy
 
   # ============================================================
+  # RocketMQ NameServer — 路由注册中心
+  # ============================================================
+  namesrv:
+    image: apache/rocketmq:4.9.7
+    container_name: sky-namesrv
+    restart: always
+    ports:
+      - "9876:9876"
+    command: sh mqnamesrv
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'echo > /dev/tcp/localhost/9876' 2>/dev/null && exit 0 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  # ============================================================
+  # RocketMQ Broker — 消息存储与投递
+  # ============================================================
+  broker:
+    image: apache/rocketmq:4.9.7
+    container_name: sky-broker
+    restart: always
+    ports:
+      - "10911:10911"
+      - "10909:10909"
+    environment:
+      - NAMESRV_ADDR=namesrv:9876
+    command: >
+      sh mqbroker
+      -n namesrv:9876
+      -c /home/rocketmq/rocketmq-4.9.7/conf/broker.conf
+      autoCreateTopicEnable=true
+      autoCreateSubscriptionGroup=true
+    networks:
+      - sky-net
+    depends_on:
+      namesrv:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'echo > /dev/tcp/localhost/10911' 2>/dev/null && exit 0 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  # ============================================================
+  # RocketMQ Console — 管理控制台
+  # ============================================================
+  rmq-console:
+    image: styletang/rocketmq-console-ng
+    container_name: sky-rmq-console
+    restart: always
+    ports:
+      - "8082:8080"
+    environment:
+      - JAVA_OPTS=-Drocketmq.namesrv.addr=namesrv:9876 -Dcom.rocketmq.sendMessageWithVIPChannel=false -Drocketmq.config.isVIPChannel=false
+    networks:
+      - sky-net
+    depends_on:
+      - broker
+
+  # ============================================================
   # Sentinel Dashboard 流量控制控制台
   # ============================================================
   sentinel:

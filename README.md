@@ -76,7 +76,7 @@ sky-take-out
 │   ├── interceptor     # 拦截器
 │   ├── mapper          # MyBatis Mapper接口
 │   ├── service         # 业务逻辑层
-│   └── websocket       # WebSocket服务 (已停用，后续用RocketMQ替代)
+│   └── mq               # RocketMQ 消息队列 (生产者+消费者, 替代 WebSocket)
 └── sky-gateway         # API 网关模块
     ├── config          # Gateway 配置 (Sentinel 限流 + CORS)
     └── GatewayApplication.java
@@ -131,6 +131,11 @@ mysql -u root -p < .sql/seata.sql         # Seata AT 模式表
 ```
 
 **启动所有基础设施容器**（Nacos + Redis + Seata + Sentinel）：
+
+先单独启动nacos
+```bash
+docker compose up -d nacos
+```
 
 ```bash
 docker compose up -d

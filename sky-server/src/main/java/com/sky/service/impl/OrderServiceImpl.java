@@ -21,8 +21,7 @@ import com.sky.vo.OrderPaymentVO;
 import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
-// TODO: WebSocket 已停用，后续用 RocketMQ 替代
-// import com.sky.websocket.WebSocketServer;
+import com.sky.mq.RocketMQProducerService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -49,9 +48,8 @@ public class OrderServiceImpl implements OrderService{
     private AddressBookMapper addressBookMapper;
     @Autowired
     private WeChatPayUtil weChatPayUtil;
-    // TODO: WebSocket 已停用，后续用 RocketMQ 替代
-//    @Autowired
-//    private WebSocketServer webSocketServer;
+    @Autowired
+    private RocketMQProducerService rocketMQProducerService;
 
 
     @Value("${sky.shop.address}")
@@ -188,14 +186,8 @@ public class OrderServiceImpl implements OrderService{
 
         orderMapper.update(orders);
 
-        //向admin端发送成功支付提醒
-        Map map = new HashMap();
-        map.put("type", 1);
-        map.put("orderId", ordersDB.getId());
-        map.put("content", "订单号：" + outTradeNo);
-        // TODO: WebSocket 已停用，后续用 RocketMQ 替代
-        // String json = JSON.toJSONString(map);
-        // webSocketServer.sendToAllClient(json);
+        //通过消息队列向admin端发送支付成功通知
+        rocketMQProducerService.sendOrderNotification(ordersDB.getId(), 1, "订单号：" + outTradeNo);
     }
 
     /**
@@ -475,12 +467,8 @@ public class OrderServiceImpl implements OrderService{
             throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
         }
 
-        Map map = new HashMap();
-        map.put("type", 2);
-        map.put("orderId", orders.getId());
-        map.put("content", orders.getNumber());
-        // TODO: WebSocket 已停用，后续用 RocketMQ 替代
-        // webSocketServer.sendToAllClient(JSON.toJSONString(map));
+        //通过消息队列向admin端发送催单通知
+        rocketMQProducerService.sendOrderNotification(orders.getId(), 2, orders.getNumber());
     }
 
     /**

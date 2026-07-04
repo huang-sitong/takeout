@@ -72,6 +72,17 @@ spring:
 #     vgroup-mapping:
 #       sky-server-group: default
 
+# ============================================================
+# RocketMQ 消息队列配置 (#4 期)
+# ============================================================
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: sky-server-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
+
 sky:
   jwt:
     admin-secret-key: <your-jwt-admin-secret-key>

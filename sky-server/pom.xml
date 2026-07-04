@@ -96,9 +96,10 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
+        <!-- RocketMQ Spring Boot Starter: 消息队列 (#4 期, 版本由父 POM 管理) -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
         </dependency>
 
         <dependency>

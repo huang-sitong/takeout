@@ -62,6 +62,9 @@ docker compose logs -f seata
 | Redis | `:6379` | password: `123456` |
 | Seata | `:8091` (TC), `:7091` (console) | console: `seata` / `seata` |
 | Sentinel Dashboard | `:8858` | `sentinel` / `sentinel` |
+| RocketMQ NameServer | `:9876` | — |
+| RocketMQ Broker | `:10911` (remoting), `:10909` (VIP) | — |
+| RocketMQ Console | `:8082` | — |
 | MySQL | `:3306` (Windows 原生) | root / `123456` |
 
 ### Container details
@@ -72,6 +75,9 @@ docker compose logs -f seata
 | `sky-redis` | `redis:7-alpine` | AOF 持久化，命名卷 `redis-data` |
 | `sky-seata` | `seataio/seata-server:1.5.2` | AT 模式，注册到 Nacos，配置挂载 `docker/seata-server/application.yml` |
 | `sky-sentinel` | `sky-sentinel-dashboard:1.8.6` | 本地构建 (`docker/sentinel-dashboard/Dockerfile`) |
+| `sky-namesrv` | `apache/rocketmq:4.9.7` | NameServer 路由注册，`autoCreateTopicEnable=true` |
+| `sky-broker` | `apache/rocketmq:4.9.7` | Broker 消息存储，连接 namesrv:9876 |
+| `sky-rmq-console` | `styletang/rocketmq-console-ng` | 管理控制台 (`http://localhost:8082`) |
 
 ### Nacos config initialization
 
@@ -151,7 +157,7 @@ Each controller package has two facets:
 ## Constraints & Warnings
 
 - **Gateway must NOT depend on `spring-boot-starter-web`** (Tomcat) — it's WebFlux/Netty only. Gateway module is self-contained; it does not depend on sky-server.
-- **WebSocket is disabled** (`WebSocketConfiguration`, `WebSocketServer`, and `OrderServiceImpl` calls are commented out). It will be replaced by RocketMQ in a future phase. Do not re-enable it.
+- **RocketMQ** (`#4 期`): 已替代 WebSocket。`OrderServiceImpl` 通过 `RocketMQProducerService` 异步发送订单通知消息到 Topic `order-notification`；`RocketMQConsumerService` 消费并记录日志。消息发送失败不阻断主流程。NameServer 端口 9876，Broker 10911，Console 8082。
 - **Nacos startup order**: Nacos Server must be running with configs created before sky-server starts, or bootstrap will fail.
 - **Windows JVM `file.encoding` pitfall**: Windows 原生 JDK 17 默认编码为 GBK，而 Nacos 中的 YAML 配置为 UTF-8，编码不一致会导致 YAML 解析失败。**仅 Windows 原生 JDK 需要**在启动前设置 `JAVA_TOOL_OPTIONS`（Git Bash / PowerShell: `$env:`），Linux / WSL / macOS 默认已是 UTF-8，无需此步骤。`application-dev.yml` in the repo is intentionally empty — content lives in Nacos.
 - **JDK 24 is incompatible** — always verify `java -version` before Maven commands.
@@ -174,6 +180,7 @@ See `.others/后续阶段TODO.md` for the roadmap. Completed:
 - #1 期 (Gateway + Nacos) ✅
 - #2 期 (Sentinel 流控熔断) ✅
 - #3 期 (Seata 分布式事务) ✅
+- #4 期 (RocketMQ 消息队列) ✅
 - #5 期 基础设施容器化 (Docker Compose) ✅
 
-Remaining: RocketMQ (#4) → 应用容器化 (#5.1-#5.5) → K8s (#6).
+Remaining: 应用容器化 (#5.1-#5.5) → K8s (#6).
