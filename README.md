@@ -26,16 +26,31 @@
 
 ### 微服务架构
 
-```
-浏览器 (:7999) ──▶ Nginx ──▶ sky-gateway (:8081) ──▶ sky-server (:8080)
-                                │        │              │
-                                │        └─ Sentinel 规则 ─┤
-                                └──── Nacos (:8848) ──────┘
-                                         │      ↑
-                                  注册+配置+规则  Sentinel Dashboard (:8858)
-                                         │
-                                    Seata Server (:8091)
-                                  分布式事务协调器 (TC)
+```mermaid
+flowchart LR
+    Browser["浏览器 (:7999)"]
+    Nginx["Nginx"]
+    Gateway["sky-gateway (:8081)"]
+    Server["sky-server (:8080)"]
+    Nacos["Nacos Server (:8848)\n注册中心 + 配置中心"]
+    Sentinel["Sentinel Dashboard (:8858)"]
+    Seata["Seata Server (:8091)\n分布式事务协调器 TC"]
+    RocketMQ["RocketMQ (:9876/10911)\n消息队列"]
+
+    Browser --> Nginx --> Gateway --> Server
+
+    Gateway -.->|服务发现| Nacos
+    Server  -.->|注册 + 配置| Nacos
+    Nacos   -.->|推送规则| Gateway
+    Nacos   -.->|推送规则| Server
+    Sentinel -.->|拉取规则| Nacos
+
+    Server  -.->|分布式事务| Seata
+    Seata  -.->|注册| Nacos
+
+    Server  -.->|生产/消费消息| RocketMQ
+
+    linkStyle 0,1,2 stroke-width:2px,fill:none
 ```
 
 | 服务 | 端口 | 说明 |
@@ -46,6 +61,9 @@
 | Nacos Server | 8848 | 注册中心 + 配置中心 + Sentinel 规则存储 |
 | Sentinel Dashboard | 8858 | 流控规则推送 + 实时监控 (可选，非强依赖) |
 | Seata Server | 8091 | 分布式事务协调器 TC (可选，非强依赖) |
+| RocketMQ NameServer | 9876 | 消息队列路由注册 |
+| RocketMQ Broker | 10911 | 消息存储与投递 |
+| RocketMQ Console | 8082 | 消息队列管理控制台 |
 | MySQL | 3306 | 数据库 |
 | Redis | 6379 | 缓存 |
 
