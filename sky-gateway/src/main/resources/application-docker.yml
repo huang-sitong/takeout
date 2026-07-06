@@ -1,0 +1,21 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos:8848
+        username: nacos
+        password: nacos
+    sentinel:
+      transport:
+        dashboard: sentinel:8858
+        port: 8720
+      eager: true
+      datasource:
+        flow:
+          nacos:
+            server-addr: nacos:8848
+            username: nacos
+            password: nacos
+            dataId: sky-gateway-flow-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: gw-flow

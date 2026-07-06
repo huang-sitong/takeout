@@ -1,0 +1,8 @@
+**/target/
+**/.git/
+**/.idea/
+**/*.iml
+**/node_modules/
+.others/
+.sql/
+docker/

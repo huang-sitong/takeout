@@ -1,9 +1,12 @@
 server:
   port: 8081
+  shutdown: graceful
 
 spring:
   application:
     name: sky-gateway
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   cloud:
     nacos:
       discovery:
@@ -37,3 +40,12 @@ spring:
             dataId: sky-gateway-flow-rules.json
             groupId: DEFAULT_GROUP
             rule-type: gw-flow
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

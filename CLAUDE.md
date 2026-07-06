@@ -30,6 +30,30 @@ mvn -pl sky-server spring-boot:run
 # Start sky-gateway (port 8081)
 mvn -pl sky-gateway spring-boot:run
 
+# ============================================================
+# Docker 容器化部署（一键启动全部服务）
+# ============================================================
+
+# 1. 先构建 JAR 包
+mvn package -DskipTests
+
+# 2. 构建 Docker 镜像 + 启动全部服务
+docker compose up -d --build
+
+# 3. 查看所有容器状态
+docker compose ps
+
+# 4. 查看应用日志
+docker compose logs -f sky-server
+docker compose logs -f sky-gateway
+
+# 5. 停止全部服务
+docker compose down
+
+# 注意: Docker 部署时 sky-server 使用 Nacos Data ID "sky-server-docker.yaml"，
+# 而非本地开发的 "sky-server-dev.yaml"。首次部署前需在 Nacos 控制台导入此配置。
+# 模板文件: .others/docs/nacos-config-sky-server-docker.yaml
+
 # Start sky-server as JAR (production):
 # java --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar
 
@@ -78,6 +102,8 @@ docker compose logs -f seata
 | `sky-namesrv` | `apache/rocketmq:4.9.7` | NameServer 路由注册，`autoCreateTopicEnable=true` |
 | `sky-broker` | `apache/rocketmq:4.9.7` | Broker 消息存储，连接 namesrv:9876 |
 | `sky-rmq-console` | `styletang/rocketmq-console-ng` | 管理控制台 (`http://localhost:8082`) |
+| `sky-server` | `sky-server:1.0-SNAPSHOT` | 本地构建 (`sky-server/Dockerfile`)，`SPRING_PROFILES_ACTIVE=docker` |
+| `sky-gateway` | `sky-gateway:1.0-SNAPSHOT` | 本地构建 (`sky-gateway/Dockerfile`)，`SPRING_PROFILES_ACTIVE=docker` |
 
 ### Nacos config initialization
 
@@ -86,6 +112,7 @@ Nacos 配置需要在 MySQL 中预先创建 `nacos_config` 数据库并执行 `.
 | Data ID | 格式 | 来源 |
 |---------|------|------|
 | `sky-server-dev.yaml` | YAML | `.others/docs/nacos-config-sky-server-dev.yaml` |
+| `sky-server-docker.yaml` | YAML | `.others/docs/nacos-config-sky-server-docker.yaml` (Docker 部署用) |
 | `sky-server-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-server-flow-rules.json` |
 | `sky-server-degrade-rules.json` | JSON | `.others/docs/nacos-config-sky-server-degrade-rules.json` |
 | `sky-gateway-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-gateway-flow-rules.json` |
@@ -167,6 +194,10 @@ Each controller package has two facets:
 - **`spring-cloud-alibaba-sentinel-gateway` 适配包必须显式声明** in sky-gateway — the starter `spring-cloud-starter-alibaba-sentinel` does NOT pull it transitively. Without it, `com.alibaba.csp.sentinel.adapter.gateway.sc.callback.*` classes are missing and Gateway 限流编译失败.
 - **Seata Server 启动顺序**：Seata Server 应在 sky-server 之前启动（否则 `@GlobalTransactional` 事务会降级为本地事务）。启动顺序：Nacos → MySQL → Seata Server → sky-server → sky-gateway。
 - **DataSourceProxy 不可重复代理**：`SeataDataSourceConfig` 用 `@Primary` 包装 Druid DataSource，确保 MyBatis 使用代理后的连接；不要在别处再次包装 DataSourceProxy。
+- **Knife4j/Springfox 与 Spring Boot 2.7.x 兼容性**：Springfox 3.0.0 的 `DocumentationPluginsBootstrapper` 在 Spring Boot 2.7.x 下会抛 NPE（`PatternsRequestCondition.getPatterns()` 为 null）。修复措施：
+  - `WebMvcConfiguration` 改为 `implements WebMvcConfigurer` 而非 `extends WebMvcConfigurationSupport`（否则 Spring Boot MVC 自动配置被禁用，`ant_path_matcher` 策略不生效）
+  - **Docker 部署**：在 `bootstrap-docker.yml` 中排除 `springfox.boot.starter.autoconfigure.OpenApiAutoConfiguration`（Docker 环境不需要 Swagger 文档）
+  - **本地开发**：确保 `application.yml` 和 Nacos `sky-server-dev.yaml` 都配置 `spring.mvc.pathmatch.matching-strategy: ant_path_matcher`
 
 ## Dependencies Managed by BOM
 
@@ -181,6 +212,6 @@ See `.others/后续阶段TODO.md` for the roadmap. Completed:
 - #2 期 (Sentinel 流控熔断) ✅
 - #3 期 (Seata 分布式事务) ✅
 - #4 期 (RocketMQ 消息队列) ✅
-- #5 期 基础设施容器化 (Docker Compose) ✅
+- #5 期 (Docker 容器化 — 基础设施 + 应用) ✅
 
-Remaining: 应用容器化 (#5.1-#5.5) → K8s (#6).
+Remaining: K8s 编排部署 (#6).

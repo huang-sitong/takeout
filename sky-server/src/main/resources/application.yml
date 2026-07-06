@@ -1,11 +1,17 @@
 server:
   port: 8080
+  shutdown: graceful
 
 spring:
   profiles:
     active: dev
   main:
     allow-circular-references: true
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -20,3 +26,12 @@ logging:
         mapper: debug
         service: info
         controller: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

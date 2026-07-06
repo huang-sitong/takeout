@@ -133,100 +133,70 @@ sky-take-out
 - JDK 17+
 - Maven 3.6+
 - MySQL 5.7+
-- **Docker Desktop** — 基础设施通过 Docker Compose 统一管理
+- **Docker Desktop** — 基础设施 + 应用全部通过 Docker Compose 统一管理
 
-### 1. 初始化基础设施
-
-**前置条件**：在 MySQL 中创建数据库并执行初始化脚本：
-
-```sql
-CREATE DATABASE IF NOT EXISTS nacos_config DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
-CREATE DATABASE IF NOT EXISTS seata;
-```
-```bash
-mysql -u root -p < .sql/nacos-mysql.sql   # Nacos 配置持久化表
-mysql -u root -p < .sql/seata.sql         # Seata AT 模式表
-```
-
-**启动所有基础设施容器**（Nacos + Redis + Seata + Sentinel）：
-
-先单独启动nacos
-```bash
-docker compose up -d nacos
-```
+### 一、Docker Compose 一键部署（推荐）
 
 ```bash
-docker compose up -d
-```
-
-| 容器 | 端口 | 说明 |
-|------|:----:|------|
-| `sky-nacos` | `:8848` (console), `:9848` (gRPC) | 无认证 (开发环境)，MySQL 后端持久化 |
-| `sky-redis` | `:6379` | AOF 持久化，密码 `123456` |
-| `sky-seata` | `:8091` (TC), `:7091` (console) | console `seata/seata`，注册到 Nacos |
-| `sky-sentinel` | `:8858` | 本地构建，`sentinel/sentinel`，非强依赖 |
-
-```bash
-docker compose ps          # 查看状态
-docker compose logs -f     # 查看日志
-docker compose down        # 停止所有
-```
-
-### 2. 创建 Nacos 配置
-在 Nacos 控制台 → 配置管理 → 配置列表 → 新建/编辑以下配置（模板见 `docs/` 目录）：
-
-| Data ID | Group | 格式 | 说明 |
-|---------|-------|------|------|
-| `sky-server-dev.yaml` | `DEFAULT_GROUP` | YAML | 数据库/Redis/OSS/微信/Sentinel 配置 |
-| `sky-server-flow-rules.json` | `DEFAULT_GROUP` | JSON | sky-server 流控规则 (7 个核心接口各 5 QPS) |
-| `sky-server-degrade-rules.json` | `DEFAULT_GROUP` | JSON | sky-server 熔断规则 (慢调用 + 异常比例) |
-| `sky-gateway-flow-rules.json` | `DEFAULT_GROUP` | JSON | gateway 全局限流规则 (路由 100 QPS) |
-
-### 3. 数据库配置
-```sql
-CREATE DATABASE sky_take_out;
-```
-执行 SQL 脚本：
-```bash
+# 1. 初始化数据库（首次）
+mysql -u root -p < .sql/nacos-mysql.sql
+mysql -u root -p < .sql/seata.sql
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sky_take_out"
 mysql -u root -p sky_take_out < .sql/sky.sql
+
+# 2. 构建 JAR 包
+mvn package -DskipTests
+
+# 3. 启动全部服务（首次启动前需在 Nacos 中导入配置，见下方 Nacos 配置节）
+docker compose up -d --build
+
+# 4. 查看状态
+docker compose ps
+
+# 5. 停止
+docker compose down
 ```
 
-### 4. 启动服务
+| 服务 | 端口 | 说明 |
+|------|:----:|------|
+| sky-gateway | 8081 | API 网关 |
+| sky-server | 8080 | 业务服务 |
+| Nacos | 8848 | 注册中心 + 配置中心 |
+| Redis | 6379 | 缓存 |
+| Seata | 8091 | 分布式事务 TC |
+| Sentinel | 8858 | 流控 Dashboard |
+| RocketMQ NameServer | 9876 | 消息队列路由 |
+| RocketMQ Broker | 10911 | 消息存储投递 |
+| RocketMQ Console | 8082 | 消息队列控制台 |
+| MySQL (宿主机) | 3306 | 数据库 |
 
-确保 `JAVA_HOME` 指向 JDK 17。
-
-> **仅 Windows 原生 JDK 需要**：先设置 JVM 编码为 UTF-8（Windows 默认 GBK 与 Nacos UTF-8 配置不一致会导致启动失败）。Linux / WSL / macOS 默认已是 UTF-8，跳过此步骤即可。
-
-每个终端窗口只需设置一次，后续所有 `mvn` / `java` 命令都会自动继承：
+### 二、本地开发模式（逐个启动）
 
 ```bash
-# Git Bash / PowerShell（仅 Windows 原生 JDK 需要）:
-export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"   # Git Bash
-$env:JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"     # PowerShell
+# 1. 启动基础设施
+docker compose up -d nacos redis seata namesrv broker sentinel
 
-# 终端1：启动 sky-server
+# 2. 启动 sky-server
 mvn -pl sky-server spring-boot:run
 
-# 终端2：启动 sky-gateway
+# 3. 启动 sky-gateway
 mvn -pl sky-gateway spring-boot:run
 ```
 
-启动顺序：MySQL → `docker compose up -d` (Nacos/Redis/Seata/Sentinel) → sky-server → sky-gateway → Nginx。
+> 本地开发时 sky-server 使用 Nacos Data ID `sky-server-dev.yaml`。
+> Docker 部署时使用 `sky-server-docker.yaml`（中间件地址为容器服务名）。
 
-### 5. 配置前端 Nginx
-将 Nginx 反向代理目标指向 gateway 端口 `8081`：
-```nginx
-upstream webservers {
-    server 127.0.0.1:8081 weight=90;
-}
-```
+### Nacos 配置初始化
 
-### 6. 验证
-- Nacos 控制台 → 服务列表：`sky-server` 和 `sky-gateway` 均已注册
-- Sentinel Dashboard (若已启动) → 可看到两个客户端实时监控
-- 浏览器访问 `http://localhost:7999` 测试前端功能
-- 接口文档: http://localhost:8080/doc.html
-- 限流验证: 高频请求核心接口，超过 5 QPS 会返回 `{"code":0,"msg":"请求过于频繁,请稍后再试","data":null}`
+首次使用需在 Nacos 控制台 `http://localhost:8848/nacos` 导入配置文件：
+
+| Data ID | 格式 | 来源 | 用途 |
+|---------|------|------|------|
+| `sky-server-dev.yaml` | YAML | `.others/docs/nacos-config-sky-server-dev.yaml` | 本地开发 |
+| `sky-server-docker.yaml` | YAML | `.others/docs/nacos-config-sky-server-docker.yaml` | Docker 部署 |
+| `sky-server-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-server-flow-rules.json` | 流控规则 |
+| `sky-server-degrade-rules.json` | JSON | `.others/docs/nacos-config-sky-server-degrade-rules.json` | 熔断规则 |
+| `sky-gateway-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-gateway-flow-rules.json` | 网关限流 |
 
 ## 接口说明
 
