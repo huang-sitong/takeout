@@ -11,8 +11,6 @@ import com.sky.vo.OrderStatisticsVO;
 import com.sky.vo.OrderVO;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.sky.handler.SentinelBlockHandler;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +18,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController("adminOrderController")
 @RequestMapping("/admin/order")
 @Slf4j
-@Api(tags = "订单相关接口")
 public class OrderController {
 
     @Autowired
@@ -32,7 +29,6 @@ public class OrderController {
      * @return
      */
     @GetMapping("/conditionSearch")
-    @ApiOperation("订单查询")
     public Result<PageResult> conditionSearch(OrdersPageQueryDTO ordersPageQueryDTO){
         PageResult pageResult = orderService.conditionSearch(ordersPageQueryDTO);
         return Result.success(pageResult);
@@ -44,7 +40,6 @@ public class OrderController {
      * @return
      */
     @GetMapping("/statistics")
-    @ApiOperation("各个状态的订单数量统计")
     public Result<OrderStatisticsVO> statistics() {
         OrderStatisticsVO orderStatisticsVO = orderService.statistics();
         return Result.success(orderStatisticsVO);
@@ -57,7 +52,6 @@ public class OrderController {
      * @return
      */
     @GetMapping("/details/{id}")
-    @ApiOperation("查询订单详情")
     public Result<OrderVO> details(@PathVariable("id") Long id) {
         OrderVO orderVO = orderService.searchOrder(id);
         return Result.success(orderVO);
@@ -69,7 +63,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/confirm")
-    @ApiOperation("接单")
     @SentinelResource(value = "confirmOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "confirmOrder")
     public Result confirm(@RequestBody OrdersConfirmDTO ordersConfirmDTO) {
         orderService.confirm(ordersConfirmDTO);
@@ -81,7 +74,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/rejection")
-    @ApiOperation("拒单")
     @SentinelResource(value = "rejectOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "rejectOrder")
     public Result rejection(@RequestBody OrdersRejectionDTO ordersRejectionDTO) throws Exception {
         orderService.rejection(ordersRejectionDTO);
@@ -93,7 +85,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/cancel")
-    @ApiOperation("取消订单")
     @SentinelResource(value = "adminCancelOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "adminCancelOrder")
     public Result cancel(@RequestBody OrdersCancelDTO ordersCancelDTO) throws Exception {
         orderService.cancel(ordersCancelDTO);
@@ -106,7 +97,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/delivery/{id}")
-    @ApiOperation("派送订单")
     public Result delivery(@PathVariable("id") Long id) {
         orderService.delivery(id);
         return Result.success();
@@ -118,7 +108,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/complete/{id}")
-    @ApiOperation("完成订单")
     @SentinelResource(value = "completeOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "completeOrder")
     public Result complete(@PathVariable("id") Long id) {
         orderService.complete(id);

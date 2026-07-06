@@ -1,7 +1,4 @@
 spring:
-  autoconfigure:
-    exclude:
-      - springfox.boot.starter.autoconfigure.OpenApiAutoConfiguration
   cloud:
     nacos:
       discovery:

@@ -7,9 +7,6 @@ import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.DishService;
 import com.sky.vo.DishVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
-import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -23,7 +20,6 @@ import java.util.Set;
  */
 @RestController("adminDishController")
 @RequestMapping("/admin/dish")
-@Api(tags = "菜品相关接口")
 @Slf4j
 public class DishController {
     @Autowired
@@ -37,7 +33,6 @@ public class DishController {
      * @return
      */
     @PostMapping()
-    @ApiOperation("新增菜品")
     public Result save(@RequestBody DishDTO dishDTO) {
         log.info("进行新增菜品:{}", dishDTO);
         dishService.save(dishDTO);
@@ -52,7 +47,6 @@ public class DishController {
      * @return
      */
     @GetMapping("/page")
-    @ApiOperation("菜品分页查询")
     public Result<PageResult> page(DishPageQueryDTO dishPageQueryDTO) {
         log.info("<菜品分页查询>:{}",  dishPageQueryDTO);
         PageResult pageResult = dishService.pageQuery(dishPageQueryDTO);
@@ -65,7 +59,6 @@ public class DishController {
      * @return
      */
     @DeleteMapping()
-    @ApiOperation("删除菜品")
     public Result delete(@RequestParam List<Long> ids){
         log.info("<删除菜品>:{}", ids);
         dishService.deleteBatch(ids);
@@ -81,7 +74,6 @@ public class DishController {
      * @return
      */
     @GetMapping("/{id}")
-    @ApiOperation("根据id查询菜品")
     public Result<DishVO> getById(@PathVariable Long id){
         log.info("根据id查询菜品:{}", id);
         DishVO dishVO = dishService.getByIdWithFlavor(id);
@@ -94,7 +86,6 @@ public class DishController {
      * @return
      */
     @PutMapping()
-    @ApiOperation("更新菜品")
     public Result update(@RequestBody DishDTO dishDTO){
         log.info("更新菜品:{}", dishDTO);
         dishService.updateWithFlavor(dishDTO);
@@ -110,7 +101,6 @@ public class DishController {
      * @return
      */
     @GetMapping("/list")
-    @ApiOperation("根据分类id查询菜品")
     public Result<List<Dish>> list(Long categoryId){
         log.info("根据分类id查询菜品:{}", categoryId);
         List<Dish> list = dishService.list(categoryId);
@@ -122,7 +112,6 @@ public class DishController {
      * @return
      */
     @PostMapping("status/{status}")
-    @ApiOperation("菜品启用/停用")
     public Result setDishStatus(@PathVariable Integer status, Long id){
         log.info("将菜品{}的状态设置为{}", id, status);
         dishService.setDishStatus(status, id);

@@ -19,7 +19,7 @@
 - **连接池**: Druid 1.2.1
 - **分页插件**: PageHelper 1.3.0
 - **认证授权**: JWT (jjwt 0.9.1)
-- **接口文档**: Knife4j 3.0.2
+- **接口文档**: OpenAPI Spec (见 `openAPI_Spec/` 目录)
 - **对象存储**: 阿里云 OSS
 - **支付**: 微信支付
 - **其他**: Lombok, Fastjson, Apache POI

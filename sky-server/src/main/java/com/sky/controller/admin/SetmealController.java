@@ -6,8 +6,6 @@ import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.SetmealService;
 import com.sky.vo.SetmealVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
@@ -18,7 +16,6 @@ import java.util.List;
 @RestController("adminSetmealController")
 @RequestMapping("/admin/setmeal")
 @Slf4j
-@Api(tags = "套餐相关接口")
 public class SetmealController {
 
     @Autowired
@@ -30,7 +27,6 @@ public class SetmealController {
      * @return
      */
     @PostMapping()
-    @ApiOperation("保存套餐")
     @CacheEvict(cacheNames = "setmealCache", key = "#setmealDTO.categoryId") //key: setmealCache::categoryId
     public Result save(@RequestBody SetmealDTO setmealDTO){
         log.info("保存套餐:{}", setmealDTO);
@@ -44,7 +40,6 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/page")
-    @ApiOperation("套餐分页查询")
     public Result<PageResult> pageQuery(SetmealPageQueryDTO setmealPageQueryDTO){
         log.info("分页查询套餐:{}", setmealPageQueryDTO);
         PageResult pageResult = setmealService.pageQuery(setmealPageQueryDTO);
@@ -57,7 +52,6 @@ public class SetmealController {
      * @return
      */
     @DeleteMapping()
-    @ApiOperation("批量删除套餐")
     @CacheEvict(cacheNames = "setmealCache", allEntries = true) //删除所有缓存
     public Result delete(@RequestParam List<Long> ids){
         log.info("批量删除套餐:{}", ids);
@@ -71,7 +65,6 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/{id}")
-    @ApiOperation("根据id查询套餐的详细信息")
     public Result<SetmealVO> getById(@PathVariable Long id){
         log.info("根据id查询套餐:{}", id);
         SetmealVO setmealVO = setmealService.getByIdWithDish(id);
@@ -84,7 +77,6 @@ public class SetmealController {
      * @return
      */
     @PutMapping()
-    @ApiOperation("更新菜品信息")
     @CacheEvict(cacheNames = "setmealCache", allEntries = true) //删除所有缓存
     public Result update(@RequestBody SetmealDTO setmealDTO){
         log.info("更新菜品信息:{}", setmealDTO);
@@ -99,7 +91,6 @@ public class SetmealController {
      * @return
      */
     @PostMapping("/status/{status}")
-    @ApiOperation("套餐起售停售")
     @CacheEvict(cacheNames = "setmealCache", allEntries = true) //删除所有缓存
     public Result startOrStop(@PathVariable Integer status, Long id) {
         setmealService.startOrStop(status, id);

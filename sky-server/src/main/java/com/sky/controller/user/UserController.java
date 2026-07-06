@@ -8,8 +8,6 @@ import com.sky.service.UserService;
 import com.sky.entity.User;
 import com.sky.utils.JwtUtil;
 import com.sky.vo.UserLoginVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +20,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/user/user")
-@Api(tags = "用户端用户登录接口")
 @Slf4j
 public class UserController {
 
@@ -37,7 +34,6 @@ public class UserController {
      * @return
      */
     @PostMapping("/login")
-    @ApiOperation("登录接口")
     public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO){
         log.info("正在进行登录:{}",userLoginDTO);
         //获取微信用户信息

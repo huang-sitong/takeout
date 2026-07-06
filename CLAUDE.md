@@ -194,10 +194,6 @@ Each controller package has two facets:
 - **`spring-cloud-alibaba-sentinel-gateway` 适配包必须显式声明** in sky-gateway — the starter `spring-cloud-starter-alibaba-sentinel` does NOT pull it transitively. Without it, `com.alibaba.csp.sentinel.adapter.gateway.sc.callback.*` classes are missing and Gateway 限流编译失败.
 - **Seata Server 启动顺序**：Seata Server 应在 sky-server 之前启动（否则 `@GlobalTransactional` 事务会降级为本地事务）。启动顺序：Nacos → MySQL → Seata Server → sky-server → sky-gateway。
 - **DataSourceProxy 不可重复代理**：`SeataDataSourceConfig` 用 `@Primary` 包装 Druid DataSource，确保 MyBatis 使用代理后的连接；不要在别处再次包装 DataSourceProxy。
-- **Knife4j/Springfox 与 Spring Boot 2.7.x 兼容性**：Springfox 3.0.0 的 `DocumentationPluginsBootstrapper` 在 Spring Boot 2.7.x 下会抛 NPE（`PatternsRequestCondition.getPatterns()` 为 null）。修复措施：
-  - `WebMvcConfiguration` 改为 `implements WebMvcConfigurer` 而非 `extends WebMvcConfigurationSupport`（否则 Spring Boot MVC 自动配置被禁用，`ant_path_matcher` 策略不生效）
-  - **Docker 部署**：在 `bootstrap-docker.yml` 中排除 `springfox.boot.starter.autoconfigure.OpenApiAutoConfiguration`（Docker 环境不需要 Swagger 文档）
-  - **本地开发**：确保 `application.yml` 和 Nacos `sky-server-dev.yaml` 都配置 `spring.mvc.pathmatch.matching-strategy: ant_path_matcher`
 
 ## Dependencies Managed by BOM
 

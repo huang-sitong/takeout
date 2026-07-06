@@ -6,8 +6,6 @@ import com.sky.vo.OrderReportVO;
 import com.sky.vo.SalesTop10ReportVO;
 import com.sky.vo.TurnoverReportVO;
 import com.sky.vo.UserReportVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -22,7 +20,6 @@ import java.time.LocalDateTime;
 @RestController("adminReportController")
 @RequestMapping("/admin/report")
 @Slf4j
-@Api(tags = "数据统计相关接口")
 public class ReportController {
 
     @Autowired
@@ -35,7 +32,6 @@ public class ReportController {
      * @return
      */
     @GetMapping("/turnoverStatistics")
-    @ApiOperation("营业额统计")
     public Result<TurnoverReportVO> getTurnoverReport(
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end) {
@@ -50,7 +46,6 @@ public class ReportController {
      * @return
      */
     @GetMapping("/userStatistics")
-    @ApiOperation("用户数据统计")
     public Result<UserReportVO> getUserReport(
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end) {
@@ -65,7 +60,6 @@ public class ReportController {
      * @return
      */
     @GetMapping("/ordersStatistics")
-    @ApiOperation("订单数据统计")
     public Result<OrderReportVO> getOrdersReport(
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end) {
@@ -80,7 +74,6 @@ public class ReportController {
      * @return
      */
     @GetMapping("/top10")
-    @ApiOperation("统计销量top10")
     public Result<SalesTop10ReportVO> getSalesTop10Report(
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate begin,
             @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate end) {
@@ -94,7 +87,6 @@ public class ReportController {
      * @param httpServletResponse
      */
     @GetMapping("/export")
-    @ApiOperation("导出数据")
     public void export(HttpServletResponse httpServletResponse){
         log.info("正在导出数据");
         reportService.exportDataReport(httpServletResponse);

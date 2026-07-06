@@ -10,8 +10,6 @@ import com.sky.vo.OrderSubmitVO;
 import com.sky.vo.OrderVO;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.sky.handler.SentinelBlockHandler;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController("userOrderController")
 @RequestMapping("/user/order")
 @Slf4j
-@Api(tags = "点餐相关接口")
 public class OrderController {
 
     @Autowired
@@ -31,7 +28,6 @@ public class OrderController {
      * @return
      */
     @PostMapping("/submit")
-    @ApiOperation("用户提交订单")
     @SentinelResource(value = "submitOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "submitOrder")
     public Result<OrderSubmitVO> submit(@RequestBody OrdersSubmitDTO ordersSubmitDTO){
         log.info("提交订单信息:{}", ordersSubmitDTO);
@@ -46,7 +42,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/payment")
-    @ApiOperation("订单支付")
     @SentinelResource(value = "payOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "payOrder")
     public Result<OrderPaymentVO> payment(@RequestBody OrdersPaymentDTO ordersPaymentDTO) throws Exception {
         log.info("订单支付：{}", ordersPaymentDTO);
@@ -63,7 +58,6 @@ public class OrderController {
      * @return
      */
     @GetMapping("/historyOrders")
-    @ApiOperation("历史订单查询")
     public Result<PageResult> historyOrders(int page, int pageSize, Integer status){
         log.info("历史订单查询");
         PageResult pageResult = orderService.pageQuery(page, pageSize, status);
@@ -76,7 +70,6 @@ public class OrderController {
      * @return
      */
     @GetMapping("/orderDetail/{id}")
-    @ApiOperation("查询订单详细信息")
     public Result<OrderVO> searchOrder(@PathVariable Long id){
         log.info("查询订单详细信息:{}", id);
         OrderVO orderVO = orderService.searchOrder(id);
@@ -89,7 +82,6 @@ public class OrderController {
      * @return
      */
     @PutMapping("/cancel/{id}")
-    @ApiOperation("取消订单")
     @SentinelResource(value = "userCancelOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "userCancelOrder")
     public Result cancel(@PathVariable("id") Long id) throws Exception {
         orderService.userCancelById(id);
@@ -102,7 +94,6 @@ public class OrderController {
      * @return
      */
     @PostMapping("/repetition/{id}")
-    @ApiOperation("再来一单")
     public Result repetition(@PathVariable Long id) {
         orderService.repetition(id);
         return Result.success();
@@ -113,7 +104,6 @@ public class OrderController {
      * @return
      */
     @GetMapping("/reminder/{id}")
-    @ApiOperation("催单")
     public Result reminder(@PathVariable Long id){
         log.info("user催单:{}", id);
         orderService.reminder(id);
