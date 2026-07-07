@@ -35,7 +35,7 @@ services:
   # Nacos 注册中心 + 配置中心
   # ============================================================
   nacos:
-    image: nacos/nacos-server:v3.0.3
+    image: nacos/nacos-server:v3.0.0
     container_name: sky-nacos
     restart: always
     ports:
@@ -51,12 +51,18 @@ services:
       - MYSQL_SERVICE_USER=root
       - MYSQL_SERVICE_PASSWORD=123456
       - NACOS_AUTH_ENABLE=false
+      - NACOS_AUTH_TOKEN=4j9ElV3zHF29hki317wi1iYwXdxUQXuPACqhzXJhHE8=
+      - NACOS_AUTH_IDENTITY_KEY=nacos
+      - NACOS_AUTH_IDENTITY_VALUE=nacos
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+      - JVM_XMN=128m
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - sky-net
     healthcheck:
-      test: ["CMD-SHELL", "curl -f -s http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+      test: ["CMD-SHELL", "curl -f -s -o /dev/null 'http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=1' || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 15
@@ -73,12 +79,13 @@ services:
       - "8091:8091"
     volumes:
       - ./docker/seata-server/application.yml:/seata-server/resources/application.yml:ro
+      - ./docker/seata-server/jdbc:/lib/jdbc:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
       - sky-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8091 || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8091' 2>/dev/null && exit 0 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -100,7 +107,7 @@ services:
     networks:
       - sky-net
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'echo > /dev/tcp/localhost/9876' 2>/dev/null && exit 0 || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9876' 2>/dev/null && exit 0 || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -129,7 +136,7 @@ services:
       namesrv:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'echo > /dev/tcp/localhost/10911' 2>/dev/null && exit 0 || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/10911' 2>/dev/null && exit 0 || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -186,6 +193,7 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

@@ -1,15 +1,69 @@
 spring:
+  datasource:
+    url: jdbc:mysql://host.docker.internal:3306/sky_take_out?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://host.docker.internal:3306/sky_take_out?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: 123456
+  redis:
+    host: redis
+    port: 6379
+    password: 123456
+    database: 0
+
+management:
+  health:
+    redis:
+      enabled: false
   cloud:
     nacos:
       discovery:
-        server-addr: nacos:8848
-        username: nacos
-        password: nacos
+        server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        health-indicator:
+          enabled: true
       config:
-        server-addr: nacos:8848
-        username: nacos
-        password: nacos
+        server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
         file-extension: yaml
+        health-indicator:
+          enabled: true
+    sentinel:
+      transport:
+        dashboard: sentinel:8858
+        port: 8719
+      eager: true
+      datasource:
+        flow:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            dataId: sky-server-flow-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: flow
+        degrade:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            dataId: sky-server-degrade-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: degrade
+
+rocketmq:
+  name-server: namesrv:9876
+  producer:
+    group: sky-server-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
 
 seata:
   enabled: true
@@ -19,3 +73,24 @@ seata:
       sky-server-group: default
     grouplist:
       default: seata:8091
+
+sky:
+  jwt:
+    admin-secret-key: itcast
+    admin-ttl: 7200000
+    admin-token-name: token
+    user-secret-key: itbast
+    user-ttl: 7200000
+    user-token-name: authentication
+  alioss:
+    endpoint: oss-cn-guangzhou.aliyuncs.com
+    access-key-id: LTAI5t71mybWAf3qPLPQais1
+    access-key-secret: TCaiaIltSF0Pqs7mOYXdwmD7vKsELq
+    bucket-name: nouxiaxia-sky-takeout
+  wechat:
+    appid: wx6d0f01e4406a6a97
+    secret: 94337c42c57738c31a45ff60f486ffbb
+  shop:
+    address: 桂林市灵川县灵田镇桂林电子科技大学花江校区
+  baidu:
+    ak: WlZyp6XyHUEgIUmuxT5bV2bUPIvSjkee

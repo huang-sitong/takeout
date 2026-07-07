@@ -9,6 +9,8 @@ server:
 spring:
   application:
     name: seata-server
+  main:
+    web-application-type: none
 
 logging:
   config: classpath:logback-spring.xml
@@ -17,11 +19,9 @@ logging:
 
 seata:
   config:
-    type: nacos
-    nacos:
-      server-addr: nacos:8848
-      namespace: ""
-      group: SEATA_GROUP
+    # 使用 file 类型：store.mode 从本地 application.yml 读取
+    # registry 仍用 nacos，方便客户端发现 Seata Server
+    type: file
   registry:
     type: nacos
     nacos:

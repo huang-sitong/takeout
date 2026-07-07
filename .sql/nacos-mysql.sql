@@ -1,7 +1,12 @@
 -- ============================================================
--- Nacos 2.2.3 MySQL 初始化 DDL
--- 来源: nacos-server-2.2.3/conf/mysql-schema.sql
+-- Nacos 3.0.0 MySQL 初始化 DDL
+-- 来源: nacos-server:3.0.0 mysql-schema.sql
 -- 使用: 在 MySQL 中执行此脚本创建 nacos_config 库和所有表
+-- ============================================================
+-- 注意: 如果是从 Nacos 2.x 升级，需要增量迁移:
+--   1. 创建 config_info_gray 表
+--   2. 为 his_config_info 添加 publish_type/gray_name/ext_info 列
+-- 可在 MySQL 中执行: SOURCE .sql/nacos-mysql-upgrade.sql;
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS `nacos_config`
@@ -30,10 +35,34 @@ CREATE TABLE IF NOT EXISTS `config_info` (
   `effect` varchar(64) DEFAULT NULL,
   `type` varchar(64) DEFAULT NULL,
   `c_schema` text,
-  `encrypted_data_key` text DEFAULT NULL COMMENT '密钥',
+  `encrypted_data_key` varchar(1024) NOT NULL DEFAULT '' COMMENT '密钥',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_configinfo_datagrouptenant` (`data_id`,`group_id`,`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='config_info';
+
+-- ============================================================
+-- 配置信息灰度表 (Nacos 2.5.0+)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `config_info_gray` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `data_id` varchar(255) NOT NULL COMMENT 'data_id',
+  `group_id` varchar(128) NOT NULL COMMENT 'group_id',
+  `content` longtext NOT NULL COMMENT 'content',
+  `md5` varchar(32) DEFAULT NULL COMMENT 'md5',
+  `src_user` text COMMENT 'src_user',
+  `src_ip` varchar(100) DEFAULT NULL COMMENT 'src_ip',
+  `gmt_create` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT 'gmt_create',
+  `gmt_modified` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT 'gmt_modified',
+  `app_name` varchar(128) DEFAULT NULL COMMENT 'app_name',
+  `tenant_id` varchar(128) DEFAULT '' COMMENT 'tenant_id',
+  `gray_name` varchar(128) NOT NULL COMMENT 'gray_name',
+  `gray_rule` text NOT NULL COMMENT 'gray_rule',
+  `encrypted_data_key` varchar(256) NOT NULL DEFAULT '' COMMENT 'encrypted_data_key',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_configinfogray_datagrouptenantgray` (`data_id`,`group_id`,`tenant_id`,`gray_name`),
+  KEY `idx_dataid_gmt_modified` (`data_id`,`gmt_modified`),
+  KEY `idx_gmt_modified` (`gmt_modified`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='config_info_gray';
 
 -- ============================================================
 -- 配置信息聚合表
@@ -144,8 +173,12 @@ CREATE TABLE IF NOT EXISTS `his_config_info` (
   `op_type` char(10) DEFAULT NULL,
   `tenant_id` varchar(128) DEFAULT '' COMMENT '租户字段',
   `encrypted_data_key` text DEFAULT NULL COMMENT '密钥',
+  `publish_type` varchar(50) DEFAULT 'formal' COMMENT 'publish type gray or formal',
+  `gray_name` varchar(50) DEFAULT NULL COMMENT 'gray name',
+  `ext_info` longtext DEFAULT NULL COMMENT 'ext info',
   PRIMARY KEY (`nid`),
   KEY `idx_gmt_create` (`gmt_create`),
+  KEY `idx_gmt_modified` (`gmt_modified`),
   KEY `idx_did` (`data_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='多租户改造';
 
