@@ -1,0 +1,21 @@
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: nacos:8848
+        username: nacos
+        password: nacos
+      config:
+        server-addr: nacos:8848
+        username: nacos
+        password: nacos
+        file-extension: yaml
+
+seata:
+  enabled: true
+  tx-service-group: sky-server-group
+  service:
+    vgroup-mapping:
+      sky-server-group: default
+    grouplist:
+      default: seata:8091

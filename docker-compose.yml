@@ -35,7 +35,7 @@ services:
   # Nacos 注册中心 + 配置中心
   # ============================================================
   nacos:
-    image: nacos/nacos-server:v2.2.3
+    image: nacos/nacos-server:v3.0.3
     container_name: sky-nacos
     restart: always
     ports:
@@ -66,12 +66,11 @@ services:
   # Seata Server 分布式事务协调器
   # ============================================================
   seata:
-    image: seataio/seata-server:1.5.2
+    image: seataio/seata-server:2.5.0
     container_name: sky-seata
     restart: always
     ports:
       - "8091:8091"
-      - "7091:7091"
     volumes:
       - ./docker/seata-server/application.yml:/seata-server/resources/application.yml:ro
     extra_hosts:
@@ -79,7 +78,7 @@ services:
     networks:
       - sky-net
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:7091 || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8091 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -92,7 +91,7 @@ services:
   # RocketMQ NameServer — 路由注册中心
   # ============================================================
   namesrv:
-    image: apache/rocketmq:4.9.7
+    image: apache/rocketmq:5.3.1
     container_name: sky-namesrv
     restart: always
     ports:
@@ -111,7 +110,7 @@ services:
   # RocketMQ Broker — 消息存储与投递
   # ============================================================
   broker:
-    image: apache/rocketmq:4.9.7
+    image: apache/rocketmq:5.3.1
     container_name: sky-broker
     restart: always
     ports:
@@ -140,13 +139,13 @@ services:
   # RocketMQ Console — 管理控制台
   # ============================================================
   rmq-console:
-    image: styletang/rocketmq-console-ng
+    image: apacherocketmq/rocketmq-dashboard:latest
     container_name: sky-rmq-console
     restart: always
     ports:
       - "8082:8080"
     environment:
-      - JAVA_OPTS=-Drocketmq.namesrv.addr=namesrv:9876 -Dcom.rocketmq.sendMessageWithVIPChannel=false -Drocketmq.config.isVIPChannel=false
+      - NAMESRV_ADDR=namesrv:9876
     networks:
       - sky-net
     depends_on:
@@ -159,7 +158,7 @@ services:
     build:
       context: ./docker/sentinel-dashboard
       dockerfile: Dockerfile
-    image: sky-sentinel-dashboard:1.8.6
+    image: sky-sentinel-dashboard:1.8.9
     container_name: sky-sentinel
     restart: always
     ports:
@@ -187,7 +186,6 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_MVC_PATHMATCH_MATCHING_STRATEGY=ant_path_matcher
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

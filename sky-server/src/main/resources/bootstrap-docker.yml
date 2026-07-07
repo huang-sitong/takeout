@@ -1,21 +1,2 @@
-spring:
-  cloud:
-    nacos:
-      discovery:
-        server-addr: nacos:8848
-        username: nacos
-        password: nacos
-      config:
-        server-addr: nacos:8848
-        username: nacos
-        password: nacos
-        file-extension: yaml
-
-seata:
-  enabled: true
-  tx-service-group: sky-server-group
-  service:
-    vgroup-mapping:
-      sky-server-group: default
-    grouplist:
-      default: seata:8091
+# bootstrap-docker.yml 已弃用：配置已合并到 application-docker.yml
+# 改用 spring.config.import 方式加载 Nacos 配置
