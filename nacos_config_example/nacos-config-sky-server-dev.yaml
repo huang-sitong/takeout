@@ -99,6 +99,6 @@ sky:
     appid: ${SKY_WECHAT_APPID:wx6d0f01e4406a6a97}
     secret: ${SKY_WECHAT_SECRET:PLACEHOLDER}
   shop:
-    address: 桂林市灵川县灵田镇桂林电子科技大学花江校区
+    address: ${SKY_SHOP_ADDRESS:桂林市灵川县灵田镇桂林电子科技大学花江校区}
   baidu:
     ak: ${SKY_BAIDU_AK:PLACEHOLDER}

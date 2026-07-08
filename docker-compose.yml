@@ -84,10 +84,13 @@ services:
       - ./docker/seata-server/jdbc:/lib/jdbc:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
     networks:
       - sky-net
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8091' 2>/dev/null && exit 0 || exit 1"]
+      # 只读方式建连探活（不写任何字节），避免 echo 的换行触发 Seata ProtocolDetectHandler 打 ERROR 刷屏
+      test: ["CMD-SHELL", "bash -c '< /dev/tcp/localhost/8091' 2>/dev/null && exit 0 || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -109,7 +112,7 @@ services:
     networks:
       - sky-net
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/9876' 2>/dev/null && exit 0 || exit 1"]
+      test: ["CMD-SHELL", "bash -c '< /dev/tcp/localhost/9876' 2>/dev/null && exit 0 || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -138,7 +141,7 @@ services:
       namesrv:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/10911' 2>/dev/null && exit 0 || exit 1"]
+      test: ["CMD-SHELL", "bash -c '< /dev/tcp/localhost/10911' 2>/dev/null && exit 0 || exit 1"]
       interval: 10s
       timeout: 3s
       retries: 10

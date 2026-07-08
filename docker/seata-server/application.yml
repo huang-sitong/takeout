@@ -29,6 +29,9 @@ seata:
       server-addr: nacos:8848
       namespace: ""
       group: SEATA_GROUP
+      # Nacos 认证已开启，注册自身需带凭据（占位符默认值即真实值，可由容器环境变量覆盖）
+      username: ${NACOS_USERNAME:nacos}
+      password: ${NACOS_PASSWORD:SkyNacos@2026}
   store:
     mode: db
     db:

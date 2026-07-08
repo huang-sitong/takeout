@@ -144,10 +144,11 @@ sky-take-out
 
 ```bash
 # 1. 初始化数据库（首次）
-mysql -u root -p < .sql/nacos-mysql.sql
-mysql -u root -p < .sql/seata.sql
+mysql -u root -p < .sql/nacos-mysql.sql          # nacos_config 库（配置中心，全新/2.x升级合一）
+mysql -u root -p < .sql/seata-server.sql         # seata 库（分布式事务 TC 存储）
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sky_take_out"
-mysql -u root -p sky_take_out < .sql/sky.sql
+mysql -u root -p sky_take_out < .sql/sky.sql     # 业务库
+mysql -u root -p sky_take_out < .sql/undo_log.sql # Seata AT 模式 undo_log 表（建在业务库）
 
 # 2. 构建 JAR 包
 mvn package -DskipTests

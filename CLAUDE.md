@@ -195,10 +195,12 @@ Each controller package has two facets:
 ### Seata 分布式事务 (#3 期已完成)
 - **AT 模式**：SCA 2025.x + Seata 2.5.0 自动代理 DataSource，无需手动 `DataSourceProxy`/`SeataDataSourceConfig`。自动生成 undo_log（前后镜像），异常时 TC 协调自动回滚。
 - **Seata Server**：Docker 部署 `seataio/seata-server:2.5.0`，`config.type: file` + `registry.type: nacos`。详见 `docker/seata-server/application.yml`。
+- **⚠️ Seata 注册 Nacos 需带认证凭据**：Nacos 已开启认证，`docker/seata-server/application.yml` 的 `registry.nacos` **必须**配 `username`/`password`（用 `${NACOS_USERNAME:nacos}`/`${NACOS_PASSWORD:SkyNacos@2026}` 占位符，compose 已给 seata 加 `env_file: .env`）。**缺凭据时**：seata 向 Nacos 注册自身返回 `401 User not found` → `ServerRunner` 抛 `Server start failed` → 进程退出 → `restart:always` 崩溃循环。此坑仅在 seata 容器**重建/宿主重启**（触发全新注册）时暴露，旧容器靠注册残留可能掩盖。
 - **客户端配置**：`seata.tx-service-group=sky-server-group` 在 `application.yml`；`@GlobalTransactional` 标注在 `OrderServiceImpl.submitOrder()` 和 `payment()`。
 - **数据库表**：`seata` 库 4 张（global_table, branch_table, lock_table, distributed_lock）+ `sky_take_out` 库 1 张（undo_log，含 `ext` 列）。
 - **与 Sentinel 分层**：`@SentinelResource` 在 Controller 层，`@GlobalTransactional` 在 Service 层，避免 AOP 代理链冲突。
 - **Seata Server 非强依赖**：Seata Server 不可用时，`@Transactional` 仍可保证本地事务（但全局事务降级为本地事务）。
+- **healthcheck 探针别写字节**：seata（及 namesrv/broker）的 compose healthcheck 用 `bash -c '< /dev/tcp/localhost/8091'`（只读建连、零字节），**不要**用 `echo > /dev/tcp/...`——`echo` 写入的换行符 `\n`(0x0A) 会被 Seata TC 的 `ProtocolDetectHandler` 当成未知协议首字节，每个探测周期打一条 `Can not recognize protocol ... preface = [10]` ERROR 刷屏（探活其实成功，纯噪声）。
 
 ## Constraints & Warnings
 
