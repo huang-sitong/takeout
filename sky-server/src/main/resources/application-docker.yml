@@ -1,0 +1,32 @@
+# Docker 环境配置（业务配置已迁回 Nacos 配置中心）
+# Data ID: sky-server-docker.yaml (由 spring.config.import 从 Nacos 拉取)
+# 本文件只保留 Docker 专属的必要覆盖项
+
+# ============================================================
+# Spring Data Redis (Boot 3.x 键名)
+# ============================================================
+# 注意: 以下为 Docker 容器内 Redis 连接配置，供本地快速参考。
+#       实际运行时，Redis 配置由 Nacos sky-server-docker.yaml 提供。
+#       如需本地调试时可取消注释：
+# spring.data.redis:
+#   host: redis
+#   port: 6379
+#   password: 123456
+#   database: 0
+
+# ============================================================
+# Actuator 健康检查
+# ============================================================
+management:
+  health:
+    redis:
+      enabled: true
+
+# ============================================================
+# Seata 地址覆盖（Docker 中 seata 服务名）
+# ============================================================
+# Nacos 配置 sky-server-docker.yaml 导入后此处可以移除
+seata:
+  service:
+    grouplist:
+      default: seata:8091

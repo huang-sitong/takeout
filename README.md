@@ -6,23 +6,27 @@
 
 ## 技术栈
 
+> **⚡ 已升级至 Spring Boot 3.x**（原 Spring Boot 2.7.3 技术栈）。`javax.*` → `jakarta.*`，JDK 17 起步。
+
 ### 后端技术
-- **核心框架**: Spring Boot 2.7.3
-- **微服务治理**: Spring Cloud 2021.0.9 + Spring Cloud Alibaba 2021.0.6.1
-- **注册中心 & 配置中心**: Nacos 2.2.3
-- **API 网关**: Spring Cloud Gateway
-- **流量控制 & 熔断降级**: Sentinel 1.8.6 (两层限流 + 慢调用/异常比例熔断)
-- **分布式事务**: Seata 1.5.2 (AT 模式，DataSourceProxy + undo_log)
-- **持久层**: MyBatis 2.2.0
+- **运行环境**: JDK 17（Jakarta EE 命名空间；JDK 24 不兼容 Lombok）
+- **核心框架**: Spring Boot 3.5.0
+- **微服务治理**: Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0
+- **注册中心 & 配置中心**: Nacos 3.0.3（**已开启认证**，控制台独立端口 8849）
+- **API 网关**: Spring Cloud Gateway (WebFlux/Netty)
+- **流量控制 & 熔断降级**: Sentinel 1.8.9 (两层限流 + 慢调用/异常比例熔断)
+- **分布式事务**: Seata 2.5.0 (AT 模式，SCA 2025 自动代理 DataSource + undo_log)
+- **消息队列**: RocketMQ 5.3.1 (rocketmq-spring-boot-starter 2.3.4，替代 WebSocket 订单通知)
+- **持久层**: MyBatis (mybatis-spring-boot-starter 3.0.5)
 - **数据库**: MySQL
-- **缓存**: Redis
-- **连接池**: Druid 1.2.1
-- **分页插件**: PageHelper 1.3.0
-- **认证授权**: JWT (jjwt 0.9.1)
+- **缓存**: Redis (Lettuce，配置键 `spring.data.redis.*`)
+- **连接池**: Druid 1.2.23 (`druid-spring-boot-3-starter`，Boot 3.x 兼容版)
+- **分页插件**: PageHelper 2.1.1
+- **认证授权**: JWT (jjwt 0.12.6)
 - **接口文档**: OpenAPI Spec (见 `openAPI_Spec/` 目录)
-- **对象存储**: 阿里云 OSS
+- **对象存储**: 阿里云 OSS (aliyun-sdk-oss 3.17.4)
 - **支付**: 微信支付
-- **其他**: Lombok, Fastjson, Apache POI
+- **其他**: Lombok 1.18.38, Fastjson 2.0.53, Apache POI 5.2.5
 
 ### 微服务架构
 
@@ -58,7 +62,8 @@ flowchart LR
 | Nginx (前端) | 7999 | 静态资源 + API 反向代理 |
 | sky-gateway | 8081 | API 网关，路由 + CORS + 负载均衡 + 限流 |
 | sky-server | 8080 | 业务服务 (Controller/Service/Mapper) + 限流熔断 |
-| Nacos Server | 8848 | 注册中心 + 配置中心 + Sentinel 规则存储 |
+| Nacos Server | 8848 | 注册中心 + 配置中心 + Sentinel 规则存储（认证已开启） |
+| Nacos 控制台 | 8849 | Nacos 3.x 控制台独立端口（容器 8080 → 主机 8849） |
 | Sentinel Dashboard | 8858 | 流控规则推送 + 实时监控 (可选，非强依赖) |
 | Seata Server | 8091 | 分布式事务协调器 TC (可选，非强依赖) |
 | RocketMQ NameServer | 9876 | 消息队列路由注册 |
@@ -124,7 +129,7 @@ sky-take-out
 - **Gateway 层限流**: 全路由 `sky-server-route` 全局 100 QPS，超过返回 HTTP 429 + `Result{code:0,msg:"系统繁忙,请稍后再试"}`
 - **sky-server 层限流**: 7 个核心写接口（下单/支付/取消/接单/拒单/取消/完成）各 5 QPS
 - **熔断降级**: 慢调用 (RT>300ms) + 异常比例 (>50%) 双策略，窗口 10s
-- **规则持久化**: 4 份规则 JSON 存于 Nacos，Dashboard 重启不丢失；模板见 `docs/` 目录
+- **规则持久化**: 4 份规则 JSON 存于 Nacos，Dashboard 重启不丢失；模板见 `nacos_config_example/` 目录
 - **统一返回**: 限流/熔断时返回与正常响应结构一致的 `Result{code:0,msg:...}`，前端可无感处理
 
 ## 快速开始
@@ -139,10 +144,11 @@ sky-take-out
 
 ```bash
 # 1. 初始化数据库（首次）
-mysql -u root -p < .sql/nacos-mysql.sql
-mysql -u root -p < .sql/seata.sql
+mysql -u root -p < .sql/nacos-mysql.sql          # nacos_config 库（配置中心，全新/2.x升级合一）
+mysql -u root -p < .sql/seata-server.sql         # seata 库（分布式事务 TC 存储）
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sky_take_out"
-mysql -u root -p sky_take_out < .sql/sky.sql
+mysql -u root -p sky_take_out < .sql/sky.sql     # 业务库
+mysql -u root -p sky_take_out < .sql/undo_log.sql # Seata AT 模式 undo_log 表（建在业务库）
 
 # 2. 构建 JAR 包
 mvn package -DskipTests
@@ -161,7 +167,8 @@ docker compose down
 |------|:----:|------|
 | sky-gateway | 8081 | API 网关 |
 | sky-server | 8080 | 业务服务 |
-| Nacos | 8848 | 注册中心 + 配置中心 |
+| Nacos | 8848 | 注册中心 + 配置中心（认证已开启） |
+| Nacos 控制台 | 8849 | Nacos 3.x 独立控制台端口 |
 | Redis | 6379 | 缓存 |
 | Seata | 8091 | 分布式事务 TC |
 | Sentinel | 8858 | 流控 Dashboard |
@@ -176,27 +183,52 @@ docker compose down
 # 1. 启动基础设施
 docker compose up -d nacos redis seata namesrv broker sentinel
 
-# 2. 启动 sky-server
+# 2. 注入敏感配置的环境变量（本地 dev 不读 .env，需手动 source）
+#    Nacos 配置里的密钥为 ${ENV_VAR} 占位符，靠环境变量解析
+set -a; source .env; set +a
+
+# 3. 启动 sky-server
 mvn -pl sky-server spring-boot:run
 
-# 3. 启动 sky-gateway
+# 4. 启动 sky-gateway
 mvn -pl sky-gateway spring-boot:run
 ```
 
 > 本地开发时 sky-server 使用 Nacos Data ID `sky-server-dev.yaml`。
-> Docker 部署时使用 `sky-server-docker.yaml`（中间件地址为容器服务名）。
+> Docker 部署时使用 `sky-server-docker.yaml`（中间件地址为容器服务名，`.env` 由 compose 的 `env_file` 自动注入）。
+>
+> ⚠️ **Windows 原生 JDK** 启动前需设 UTF-8，否则 Nacos 中文 YAML 解析失败：
+> `export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"`
 
 ### Nacos 配置初始化
 
-首次使用需在 Nacos 控制台 `http://localhost:8848/nacos` 导入配置文件：
+> Nacos 3.x 已开启认证，控制台迁到独立端口 **8849**（旧的 `http://localhost:8848/nacos/` 已废弃）。
+
+**① 首次初始化管理员**（Nacos ≥2.4 无内置 `nacos/nacos`，`users`/`roles` 表默认为空）：
+
+```bash
+docker compose up -d nacos
+# Nacos 3.x 用 v3 端点，v1 已废弃返回 410
+curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNacos@2026'
+```
+
+**② 登录控制台** `http://localhost:8849/index.html`，账号 `nacos` / `SkyNacos@2026`，导入 5 个配置文件：
 
 | Data ID | 格式 | 来源 | 用途 |
 |---------|------|------|------|
-| `sky-server-dev.yaml` | YAML | `.others/docs/nacos-config-sky-server-dev.yaml` | 本地开发 |
-| `sky-server-docker.yaml` | YAML | `.others/docs/nacos-config-sky-server-docker.yaml` | Docker 部署 |
-| `sky-server-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-server-flow-rules.json` | 流控规则 |
-| `sky-server-degrade-rules.json` | JSON | `.others/docs/nacos-config-sky-server-degrade-rules.json` | 熔断规则 |
-| `sky-gateway-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-gateway-flow-rules.json` | 网关限流 |
+| `sky-server-dev.yaml` | YAML | `nacos_config_example/nacos-config-sky-server-dev.yaml` | 本地开发 |
+| `sky-server-docker.yaml` | YAML | `nacos_config_example/nacos-config-sky-server-docker.yaml` | Docker 部署 |
+| `sky-server-flow-rules.json` | JSON | `nacos_config_example/nacos-config-sky-server-flow-rules.json` | 流控规则 |
+| `sky-server-degrade-rules.json` | JSON | `nacos_config_example/nacos-config-sky-server-degrade-rules.json` | 熔断规则 |
+| `sky-gateway-flow-rules.json` | JSON | `nacos_config_example/nacos-config-sky-gateway-flow-rules.json` | 网关限流 |
+
+> 配置内容持久化在 MySQL `nacos_config` 库，容器重建不丢失。
+
+**③ 敏感密钥管理**：配置模板中的密钥（OSS AK/SK、微信 secret、百度 AK、DB/Redis 密码、JWT secret）统一用 `${ENV_VAR:默认值}` 占位符，**真实值只存于 gitignored 的 `.env`**，绝不进版本库。
+
+- **Docker 部署**：`.env` 经 `docker-compose.yml` 的 `env_file` 注入容器，Spring 启动时用容器环境变量解析占位符。
+- **本地开发**：`.env` 不自动加载，需先 `set -a; source .env; set +a`（见上）。
+- 复制一份 `.env` 模板并填入真实密钥即可；`.env` 已在 `.gitignore` 中。
 
 ## 接口说明
 

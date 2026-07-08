@@ -1,7 +1,15 @@
 -- ============================================================
--- Nacos 2.2.3 MySQL 初始化 DDL
--- 来源: nacos-server-2.2.3/conf/mysql-schema.sql
--- 使用: 在 MySQL 中执行此脚本创建 nacos_config 库和所有表
+-- Nacos 3.0.x MySQL 初始化 DDL（合并版：全新安装 + 2.x 增量升级二合一）
+-- 来源: nacos-server:3.0.x mysql-schema.sql
+-- 使用: mysql -u root -p < .sql/nacos-mysql.sql
+-- ============================================================
+-- 幂等设计（可重复执行，安全）：
+--   · 全新安装：直接创建 nacos_config 库及全部 3.0.x 表（含 config_info_gray、
+--     his_config_info 的 publish_type/gray_name/ext_info 列）。
+--   · 从 Nacos 2.x 升级：CREATE TABLE IF NOT EXISTS 跳过已存在的表，文件末尾的
+--     ALTER TABLE 守卫（information_schema 检测 + PREPARE）为旧 his_config_info
+--     补齐 3.x 新增列与索引，MySQL 5.7 兼容。
+-- 因此无论全新还是升级，都只需执行本文件一份（原 nacos-mysql-upgrade.sql 已合并至此）。
 -- ============================================================
 
 CREATE DATABASE IF NOT EXISTS `nacos_config`
@@ -30,10 +38,34 @@ CREATE TABLE IF NOT EXISTS `config_info` (
   `effect` varchar(64) DEFAULT NULL,
   `type` varchar(64) DEFAULT NULL,
   `c_schema` text,
-  `encrypted_data_key` text DEFAULT NULL COMMENT '密钥',
+  `encrypted_data_key` varchar(1024) NOT NULL DEFAULT '' COMMENT '密钥',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_configinfo_datagrouptenant` (`data_id`,`group_id`,`tenant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='config_info';
+
+-- ============================================================
+-- 配置信息灰度表 (Nacos 2.5.0+)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS `config_info_gray` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `data_id` varchar(255) NOT NULL COMMENT 'data_id',
+  `group_id` varchar(128) NOT NULL COMMENT 'group_id',
+  `content` longtext NOT NULL COMMENT 'content',
+  `md5` varchar(32) DEFAULT NULL COMMENT 'md5',
+  `src_user` text COMMENT 'src_user',
+  `src_ip` varchar(100) DEFAULT NULL COMMENT 'src_ip',
+  `gmt_create` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT 'gmt_create',
+  `gmt_modified` datetime(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) COMMENT 'gmt_modified',
+  `app_name` varchar(128) DEFAULT NULL COMMENT 'app_name',
+  `tenant_id` varchar(128) DEFAULT '' COMMENT 'tenant_id',
+  `gray_name` varchar(128) NOT NULL COMMENT 'gray_name',
+  `gray_rule` text NOT NULL COMMENT 'gray_rule',
+  `encrypted_data_key` varchar(256) NOT NULL DEFAULT '' COMMENT 'encrypted_data_key',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_configinfogray_datagrouptenantgray` (`data_id`,`group_id`,`tenant_id`,`gray_name`),
+  KEY `idx_dataid_gmt_modified` (`data_id`,`gmt_modified`),
+  KEY `idx_gmt_modified` (`gmt_modified`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='config_info_gray';
 
 -- ============================================================
 -- 配置信息聚合表
@@ -144,8 +176,12 @@ CREATE TABLE IF NOT EXISTS `his_config_info` (
   `op_type` char(10) DEFAULT NULL,
   `tenant_id` varchar(128) DEFAULT '' COMMENT '租户字段',
   `encrypted_data_key` text DEFAULT NULL COMMENT '密钥',
+  `publish_type` varchar(50) DEFAULT 'formal' COMMENT 'publish type gray or formal',
+  `gray_name` varchar(50) DEFAULT NULL COMMENT 'gray name',
+  `ext_info` longtext DEFAULT NULL COMMENT 'ext info',
   PRIMARY KEY (`nid`),
   KEY `idx_gmt_create` (`gmt_create`),
+  KEY `idx_gmt_modified` (`gmt_modified`),
   KEY `idx_did` (`data_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='多租户改造';
 
@@ -211,3 +247,51 @@ CREATE TABLE IF NOT EXISTS `permissions` (
   `action` varchar(8) NOT NULL,
   UNIQUE KEY `uk_role_permission` (`role`,`resource`,`action`) USING BTREE
 );
+
+-- ============================================================
+-- 2.x → 3.0.x 增量升级守卫（幂等）
+-- ------------------------------------------------------------
+-- 上面的 CREATE TABLE IF NOT EXISTS 在已有 2.x 库上会跳过 his_config_info，
+-- 因此需用 information_schema 检测 + PREPARE 动态 SQL 为旧表补齐 3.x 新增列/索引
+-- （MySQL 5.7 不支持 ADD COLUMN IF NOT EXISTS）。全新安装时这些列/索引已存在，守卫自动 no-op。
+-- ============================================================
+
+-- his_config_info: 补充 publish_type 列
+SELECT IF(
+  NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='nacos_config' AND TABLE_NAME='his_config_info' AND COLUMN_NAME='publish_type'),
+  'ALTER TABLE his_config_info ADD COLUMN `publish_type` varchar(50) DEFAULT \'formal\' COMMENT \'publish type gray or formal\' AFTER `encrypted_data_key`',
+  'SELECT 1'
+) INTO @sql_publish_type;
+PREPARE stmt_publish_type FROM @sql_publish_type;
+EXECUTE stmt_publish_type;
+DEALLOCATE PREPARE stmt_publish_type;
+
+-- his_config_info: 补充 gray_name 列
+SELECT IF(
+  NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='nacos_config' AND TABLE_NAME='his_config_info' AND COLUMN_NAME='gray_name'),
+  'ALTER TABLE his_config_info ADD COLUMN `gray_name` varchar(50) DEFAULT NULL COMMENT \'gray name\' AFTER `publish_type`',
+  'SELECT 1'
+) INTO @sql_gray_name;
+PREPARE stmt_gray_name FROM @sql_gray_name;
+EXECUTE stmt_gray_name;
+DEALLOCATE PREPARE stmt_gray_name;
+
+-- his_config_info: 补充 ext_info 列
+SELECT IF(
+  NOT EXISTS(SELECT * FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='nacos_config' AND TABLE_NAME='his_config_info' AND COLUMN_NAME='ext_info'),
+  'ALTER TABLE his_config_info ADD COLUMN `ext_info` longtext DEFAULT NULL COMMENT \'ext info\' AFTER `gray_name`',
+  'SELECT 1'
+) INTO @sql_ext_info;
+PREPARE stmt_ext_info FROM @sql_ext_info;
+EXECUTE stmt_ext_info;
+DEALLOCATE PREPARE stmt_ext_info;
+
+-- his_config_info: 补充 idx_gmt_modified 索引
+SELECT IF(
+  NOT EXISTS(SELECT * FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='nacos_config' AND TABLE_NAME='his_config_info' AND INDEX_NAME='idx_gmt_modified'),
+  'ALTER TABLE his_config_info ADD INDEX `idx_gmt_modified` (`gmt_modified`)',
+  'SELECT 1'
+) INTO @sql_idx;
+PREPARE stmt_idx FROM @sql_idx;
+EXECUTE stmt_idx;
+DEALLOCATE PREPARE stmt_idx;

@@ -1,8 +1,10 @@
 **/target/
 .others
+.claude
 .idea
 application-dev.yml
 *.iml
 *.class
 *Test.java
 **/test/
+.env

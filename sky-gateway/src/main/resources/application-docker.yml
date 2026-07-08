@@ -2,9 +2,9 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: nacos:8848
-        username: nacos
-        password: nacos
+        server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
     sentinel:
       transport:
         dashboard: sentinel:8858
@@ -13,9 +13,9 @@ spring:
       datasource:
         flow:
           nacos:
-            server-addr: nacos:8848
-            username: nacos
-            password: nacos
+            server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
             dataId: sky-gateway-flow-rules.json
             groupId: DEFAULT_GROUP
             rule-type: gw-flow

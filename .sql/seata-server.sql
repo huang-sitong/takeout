@@ -1,6 +1,8 @@
 -- ============================================================
 -- Seata Server 数据库初始化脚本
--- 适用版本：Seata 1.5.x，storeMode='db'
+-- 适用版本：Seata 1.5.x ~ 2.5.0，storeMode='db'
+--   （global_table / branch_table / lock_table / distributed_lock 四表
+--    自 1.5.0 起结构稳定，2.x 未变更，本脚本通用；本项目实际部署 Seata 2.5.0）
 -- 使用方法：
 --   mysql -u root -p < .sql/seata-server.sql
 -- ============================================================

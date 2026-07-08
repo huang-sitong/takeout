@@ -1,28 +1,25 @@
-# Nacos 配置模板 —— 请在 Nacos 控制台中导入
-# 访问：http://127.0.0.1:8848/nacos
+# Nacos 配置模板 —— 本地开发
+# 请在 Nacos 控制台中导入
+# 控制台：http://localhost:8849/index.html （Nacos 3.x 独立端口；旧 :8848/nacos/ 已废弃）
+# 登录：nacos / <你的 Nacos 密码>（Nacos 3.x 已开启认证，首次需初始化管理员）
 # 命名空间：public (默认)
 # Data ID: sky-server-dev.yaml
 # Group: DEFAULT_GROUP
 # 配置格式: YAML
 #
 # ============================================================
-# 导入说明：
-#   本文件为 Sentinel 接入 (TODO #2.3) 后的 sky-server-dev.yaml 模板。
-#   本仓库中的 docs/ 仅作配置参照，敏感字段已用占位符 <...> 替换。
-#   请将占位符替换为你的真实值后，在 Nacos 控制台「配置管理 - 配置列表」中，
-#   找到 Data ID = sky-server-dev.yaml 的配置，点击「编辑」，
-#   将下方内容（保留本说明头部也可，纯注释不影响 YAML 解析）
-#   完整粘贴到「配置内容」输入框，保存。
-#
-# 注意：
-#   - 本文件中的中文 (如 shop.address) 必须以 UTF-8 保存与粘贴，
-#     Nacos 控制台默认按 UTF-8 解析，直接复制粘贴即可。
-#   - spring.cloud.sentinel.transport.dashboard 指向 Sentinel Dashboard。
-#   - spring.cloud.sentinel.datasource.flow/degrade 通过 Nacos 数据源持久化规则，
-#     对应的规则 dataId 见同目录下：
-#       docs/nacos-config-sky-server-flow-rules.json
-#       docs/nacos-config-sky-server-degrade-rules.json
-#     这两个 dataId 也需在 Nacos 中创建，否则启动时会告警 (不影响应用启动)。
+# 说明：
+#   - 本文件为本地开发配置，中间件地址为 127.0.0.1 / localhost。
+#     Docker 部署请用 sky-server-docker.yaml（地址为容器服务名）。
+#   - 敏感字段统一用 ${ENV_VAR:默认值} 占位符：真实密钥只存于 gitignored 的 .env，
+#     因此本文件可安全提交，无需再做 <...> 手工屏蔽。
+#     本地 dev 不自动加载 .env，运行前需 `set -a; source .env; set +a` 注入环境变量；
+#     未注入时占位符退回冒号后的默认值（本地 DB/Redis 用 123456，密钥退回 PLACEHOLDER）。
+#   - Spring Boot 3.x 的 Redis 配置键为 spring.data.redis.*（非 2.x 的 spring.redis.*，旧键会被静默忽略）。
+#   - 中文（如 shop.address）以 UTF-8 保存粘贴。
+#   - spring.cloud.sentinel.datasource.flow/degrade 依赖两份规则 dataId
+#     （sky-server-flow-rules.json / sky-server-degrade-rules.json），需一并导入 Nacos，
+#     否则启动告警（不影响应用启动）。
 # ============================================================
 
 spring:
@@ -30,13 +27,14 @@ spring:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://localhost:3306/sky_take_out?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
-      username: <your-mysql-username>
-      password: <your-mysql-password>
-  redis:
-    host: localhost
-    port: 6379
-    password: <your-redis-password>
-    database: 0
+      username: root
+      password: ${SKY_DB_PASSWORD:123456}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${SKY_REDIS_PASSWORD:123456}
+      database: 0
   cloud:
     sentinel:
       transport:
@@ -46,17 +44,17 @@ spring:
       datasource:
         flow:
           nacos:
-            server-addr: 127.0.0.1:8848
-            username: nacos
-            password: nacos
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
             dataId: sky-server-flow-rules.json
             groupId: DEFAULT_GROUP
             rule-type: flow
         degrade:
           nacos:
-            server-addr: 127.0.0.1:8848
-            username: nacos
-            password: nacos
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
             dataId: sky-server-degrade-rules.json
             groupId: DEFAULT_GROUP
             rule-type: degrade
@@ -64,8 +62,9 @@ spring:
 # ============================================================
 # Seata 分布式事务配置 (#3 期)
 # ============================================================
-# 注意：seata.registry 和 seata.config 已在 bootstrap.yml 中配置，
-# 以下为可选覆盖项。tx-service-group 必须与 seata-server 的 vgroup-mapping 一致。
+# 注意：seata.enabled / tx-service-group / vgroup-mapping 已在 application.yml 中配置
+# （原 bootstrap.yml 已随 Boot 3.x 升级移除，改用 spring.config.import 从 Nacos 拉配置）。
+# 以下为可选覆盖项，tx-service-group 必须与 seata-server 的 vgroup-mapping 一致。
 # seata:
 #   tx-service-group: sky-server-group
 #   service:
@@ -85,21 +84,21 @@ rocketmq:
 
 sky:
   jwt:
-    admin-secret-key: <your-jwt-admin-secret-key>
+    admin-secret-key: ${SKY_JWT_ADMIN_SECRET:itcast}
     admin-ttl: 7200000
     admin-token-name: token
-    user-secret-key: <your-jwt-user-secret-key>
+    user-secret-key: ${SKY_JWT_USER_SECRET:itbast}
     user-ttl: 7200000
     user-token-name: authentication
   alioss:
-    endpoint: <your-ali-oss-endpoint>
-    access-key-id: <your-ali-oss-access-key-id>
-    access-key-secret: <your-ali-oss-access-key-secret>
-    bucket-name: <your-ali-oss-bucket-name>
+    endpoint: ${SKY_ALIOSS_ENDPOINT:oss-cn-guangzhou.aliyuncs.com}
+    access-key-id: ${SKY_ALIOSS_AK:PLACEHOLDER}
+    access-key-secret: ${SKY_ALIOSS_SK:PLACEHOLDER}
+    bucket-name: ${SKY_ALIOSS_BUCKET:nouxiaxia-sky-takeout}
   wechat:
-    appid: <your-wechat-appid>
-    secret: <your-wechat-secret>
+    appid: ${SKY_WECHAT_APPID:wx6d0f01e4406a6a97}
+    secret: ${SKY_WECHAT_SECRET:PLACEHOLDER}
   shop:
-    address: <your-shop-address>
+    address: ${SKY_SHOP_ADDRESS:桂林市灵川县灵田镇桂林电子科技大学花江校区}
   baidu:
-    ak: <your-baidu-ak>
+    ak: ${SKY_BAIDU_AK:PLACEHOLDER}
