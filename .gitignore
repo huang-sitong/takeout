@@ -1,5 +1,6 @@
 **/target/
 .others
+.claude
 .idea
 application-dev.yml
 *.iml

@@ -52,7 +52,7 @@ docker compose down
 
 # 注意: Docker 部署时 sky-server 使用 Nacos Data ID "sky-server-docker.yaml"，
 # 而非本地开发的 "sky-server-dev.yaml"。首次部署前需在 Nacos 控制台导入此配置。
-# 模板文件: .others/docs/nacos-config-sky-server-docker.yaml
+# 模板文件: nacos_config_example/nacos-config-sky-server-docker.yaml
 
 # Start sky-server as JAR (production):
 # java --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED -jar sky-server/target/sky-server-1.0-SNAPSHOT.jar
@@ -125,12 +125,13 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNa
 
 | Data ID | 格式 | 来源 |
 |---------|------|------|
-| `sky-server-dev.yaml` | YAML | `.others/nacos_config/nacos-config-sky-server-dev.yaml` |
-| `sky-server-docker.yaml` | YAML | `.others/nacos_config/nacos-config-sky-server-docker.yaml` (Docker 部署用) |
-| `sky-server-flow-rules.json` | JSON | `.others/nacos_config/nacos-config-sky-server-flow-rules.json` |
-| `sky-server-degrade-rules.json` | JSON | `.others/nacos_config/nacos-config-sky-server-degrade-rules.json` |
-| `sky-gateway-flow-rules.json` | JSON | `.others/nacos_config/nacos-config-sky-gateway-flow-rules.json` |
+| `sky-server-dev.yaml` | YAML | `nacos_config_example/nacos-config-sky-server-dev.yaml` |
+| `sky-server-docker.yaml` | YAML | `nacos_config_example/nacos-config-sky-server-docker.yaml` (Docker 部署用) |
+| `sky-server-flow-rules.json` | JSON | `nacos_config_example/nacos-config-sky-server-flow-rules.json` |
+| `sky-server-degrade-rules.json` | JSON | `nacos_config_example/nacos-config-sky-server-degrade-rules.json` |
+| `sky-gateway-flow-rules.json` | JSON | `nacos_config_example/nacos-config-sky-gateway-flow-rules.json` |
 
+> 模板中敏感字段用 `${ENV_VAR:默认值}` 占位符，真实值只存于 gitignored 的 `.env`，导入 Nacos 后由应用环境变量解析。
 > 配置内容持久化在 MySQL `nacos_config` 库，容器重建不丢失。认证开启后用 OpenAPI 写配置需带 `accessToken`（先 `POST /nacos/v3/auth/user/login` 获取）。
 
 No Maven wrapper (`mvnw`) — use system `mvn`.
