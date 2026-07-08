@@ -6,3 +6,4 @@ application-dev.yml
 *.class
 *Test.java
 **/test/
+.env

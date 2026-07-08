@@ -82,7 +82,7 @@ docker compose logs -f seata
 
 | Service | Port | Credentials |
 |---------|------|-------------|
-| Nacos | `:8848` (console), `:9848` (gRPC) | **无认证** (开发环境) |
+| Nacos | `:8848` (API/gRPC 9848/9849), 控制台 `:8849` (容器 8080) | **已开启认证** `nacos` / `SkyNacos@2026` |
 | Redis | `:6379` | password: `123456` |
 | Seata | `:8091` (TC), `:7091` (console) | console: `seata` / `seata` |
 | Sentinel Dashboard | `:8858` | `sentinel` / `sentinel` |
@@ -95,27 +95,43 @@ docker compose logs -f seata
 
 | Container | Image | Notes |
 |-----------|-------|-------|
-| `sky-nacos` | `nacos/nacos-server:v2.2.3` | 单机模式，MySQL 后端 (`nacos_config` 库)，认证关闭 |
+| `sky-nacos` | `nacos/nacos-server:v3.0.3` | 单机模式，MySQL 后端 (`nacos_config` 库)，**认证开启** (`NACOS_AUTH_ENABLE=true`)，控制台端口 8080→主机 8849 |
 | `sky-redis` | `redis:7-alpine` | AOF 持久化，命名卷 `redis-data` |
-| `sky-seata` | `seataio/seata-server:1.5.2` | AT 模式，注册到 Nacos，配置挂载 `docker/seata-server/application.yml` |
-| `sky-sentinel` | `sky-sentinel-dashboard:1.8.6` | 本地构建 (`docker/sentinel-dashboard/Dockerfile`) |
-| `sky-namesrv` | `apache/rocketmq:4.9.7` | NameServer 路由注册，`autoCreateTopicEnable=true` |
-| `sky-broker` | `apache/rocketmq:4.9.7` | Broker 消息存储，连接 namesrv:9876 |
-| `sky-rmq-console` | `styletang/rocketmq-console-ng` | 管理控制台 (`http://localhost:8082`) |
+| `sky-seata` | `seataio/seata-server:2.5.0` | AT 模式，注册到 Nacos，配置挂载 `docker/seata-server/application.yml` |
+| `sky-sentinel` | `sky-sentinel-dashboard:1.8.9` | 本地构建 (`docker/sentinel-dashboard/Dockerfile`) |
+| `sky-namesrv` | `apache/rocketmq:5.3.1` | NameServer 路由注册，`autoCreateTopicEnable=true` |
+| `sky-broker` | `apache/rocketmq:5.3.1` | Broker 消息存储，连接 namesrv:9876 |
+| `sky-rmq-console` | `apacherocketmq/rocketmq-dashboard` | 管理控制台 (`http://localhost:8082`) |
 | `sky-server` | `sky-server:1.0-SNAPSHOT` | 本地构建 (`sky-server/Dockerfile`)，`SPRING_PROFILES_ACTIVE=docker` |
 | `sky-gateway` | `sky-gateway:1.0-SNAPSHOT` | 本地构建 (`sky-gateway/Dockerfile`)，`SPRING_PROFILES_ACTIVE=docker` |
 
 ### Nacos config initialization
 
-Nacos 配置需要在 MySQL 中预先创建 `nacos_config` 数据库并执行 `.sql/nacos-mysql.sql`。首次使用需在 Nacos 控制台 `http://localhost:8848/nacos` 导入 4 个配置文件：
+Nacos 配置需要在 MySQL 中预先创建 `nacos_config` 数据库并执行 `.sql/nacos-mysql.sql`。
+
+**⚠️ Nacos 3.x 已开启认证，首次部署需初始化管理员**（`users`/`roles` 表默认为空，无内置 `nacos/nacos`）：
+
+```bash
+# 1. 启动 Nacos（compose 已设 NACOS_AUTH_ENABLE=true）
+docker compose up -d nacos
+
+# 2. 一次性初始化管理员（Nacos 3.x 用 v3 端点，v1 已废弃返回 410）
+curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNacos@2026'
+
+# 3. 之后客户端凭 .env 中 NACOS_USERNAME/NACOS_PASSWORD 自动登录
+```
+
+控制台地址为 **`http://localhost:8849/index.html`**（Nacos 3.x 控制台独立在容器 8080 端口，映射到主机 8849；旧的 `/nacos/` 路径已废弃）。首次登录用 `nacos` / `SkyNacos@2026`，导入 5 个配置文件：
 
 | Data ID | 格式 | 来源 |
 |---------|------|------|
-| `sky-server-dev.yaml` | YAML | `.others/docs/nacos-config-sky-server-dev.yaml` |
-| `sky-server-docker.yaml` | YAML | `.others/docs/nacos-config-sky-server-docker.yaml` (Docker 部署用) |
-| `sky-server-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-server-flow-rules.json` |
-| `sky-server-degrade-rules.json` | JSON | `.others/docs/nacos-config-sky-server-degrade-rules.json` |
-| `sky-gateway-flow-rules.json` | JSON | `.others/docs/nacos-config-sky-gateway-flow-rules.json` |
+| `sky-server-dev.yaml` | YAML | `.others/nacos_config/nacos-config-sky-server-dev.yaml` |
+| `sky-server-docker.yaml` | YAML | `.others/nacos_config/nacos-config-sky-server-docker.yaml` (Docker 部署用) |
+| `sky-server-flow-rules.json` | JSON | `.others/nacos_config/nacos-config-sky-server-flow-rules.json` |
+| `sky-server-degrade-rules.json` | JSON | `.others/nacos_config/nacos-config-sky-server-degrade-rules.json` |
+| `sky-gateway-flow-rules.json` | JSON | `.others/nacos_config/nacos-config-sky-gateway-flow-rules.json` |
+
+> 配置内容持久化在 MySQL `nacos_config` 库，容器重建不丢失。认证开启后用 OpenAPI 写配置需带 `accessToken`（先 `POST /nacos/v3/auth/user/login` 获取）。
 
 No Maven wrapper (`mvnw`) — use system `mvn`.
 
@@ -156,10 +172,12 @@ Each controller package has two facets:
 `Result<T>` in sky-common wraps all API responses: `{code, msg, data}`. `PageResult` extends it for paginated list responses.
 
 ### Nacos Config
-- All environment-specific config (datasource, redis, OSS, WeChat) lives in **Nacos Config Center**, NOT in `application-dev.yml` (that file is intentionally empty and gitignored).
-- Config Data ID: `sky-server-dev.yaml`, group `DEFAULT_GROUP`. Must exist in Nacos before sky-server starts.
-- sky-server uses `bootstrap.yml` to connect to Nacos (requires the explicit `spring-cloud-starter-bootstrap` dependency — Spring Boot 2.7.x disables bootstrap by default).
+- All environment-specific config (datasource, redis, OSS, WeChat) lives in **Nacos Config Center**. Local `application-dev.yml` is intentionally empty (tombstone).
+- Config Data ID: `sky-server-dev.yaml` (dev) / `sky-server-docker.yaml` (docker), group `DEFAULT_GROUP`. Must exist in Nacos before sky-server starts.
+- sky-server uses `spring.config.import: optional:nacos:sky-server-${spring.profiles.active}.yaml` in `application.yml` to pull config from Nacos (Boot 2.x bootstrap.yml approach has been replaced).
+- Nacos server-addr is resolved via `${NACOS_SERVER_ADDR:127.0.0.1:8848}` placeholder — set env var `NACOS_SERVER_ADDR` to override (used in Docker: `NACOS_SERVER_ADDR=nacos:8848`).
 - Properties beans (`AliOssProperties`, `JwtProperties`, `WeChatProperties`) are annotated with `@RefreshScope` for hot reload.
+- **Redis key注意**: Spring Boot 3.x 将配置键从 `spring.redis.*` 改为 `spring.data.redis.*`，Nacos 模板已同步更新。
 
 ### Sentinel 流控熔断 (#2 期已完成)
 - **两层限流**：Gateway 层按路由资源 `sky-server-route` 全局 100 QPS；sky-server 层用 `@SentinelResource` 标 7 个核心写接口各 5 QPS。
@@ -174,9 +192,9 @@ Each controller package has two facets:
 - **Sentinel Dashboard 非强依赖**：规则在客户端启动时从 Nacos 拉到内存，Dashboard 仅用于实时监控与规则推送；Dashboard 进程不存在不影响限流功能。
 
 ### Seata 分布式事务 (#3 期已完成)
-- **AT 模式**：`DataSourceProxy` 包装 Druid DataSource，自动生成 undo_log（前后镜像），异常时 TC 协调自动回滚。
-- **Seata Server**：Docker 部署 `seataio/seata-server:1.5.2`，store.mode=db（数据库 `seata`），注册到 Nacos（group: `SEATA_GROUP`）。
-- **客户端配置**：`seata.tx-service-group=sky-server-group` 在 `bootstrap.yml`；`@GlobalTransactional` 标注在 `OrderServiceImpl.submitOrder()` 和 `payment()`。
+- **AT 模式**：SCA 2025.x + Seata 2.5.0 自动代理 DataSource，无需手动 `DataSourceProxy`/`SeataDataSourceConfig`。自动生成 undo_log（前后镜像），异常时 TC 协调自动回滚。
+- **Seata Server**：Docker 部署 `seataio/seata-server:2.5.0`，`config.type: file` + `registry.type: nacos`。详见 `docker/seata-server/application.yml`。
+- **客户端配置**：`seata.tx-service-group=sky-server-group` 在 `application.yml`；`@GlobalTransactional` 标注在 `OrderServiceImpl.submitOrder()` 和 `payment()`。
 - **数据库表**：`seata` 库 4 张（global_table, branch_table, lock_table, distributed_lock）+ `sky_take_out` 库 1 张（undo_log，含 `ext` 列）。
 - **与 Sentinel 分层**：`@SentinelResource` 在 Controller 层，`@GlobalTransactional` 在 Service 层，避免 AOP 代理链冲突。
 - **Seata Server 非强依赖**：Seata Server 不可用时，`@Transactional` 仍可保证本地事务（但全局事务降级为本地事务）。
@@ -185,15 +203,17 @@ Each controller package has two facets:
 
 - **Gateway must NOT depend on `spring-boot-starter-web`** (Tomcat) — it's WebFlux/Netty only. Gateway module is self-contained; it does not depend on sky-server.
 - **RocketMQ** (`#4 期`): 已替代 WebSocket。`OrderServiceImpl` 通过 `RocketMQProducerService` 异步发送订单通知消息到 Topic `order-notification`；`RocketMQConsumerService` 消费并记录日志。消息发送失败不阻断主流程。NameServer 端口 9876，Broker 10911，Console 8082。
-- **Nacos startup order**: Nacos Server must be running with configs created before sky-server starts, or bootstrap will fail.
+- **Nacos startup order**: Nacos Server must be running with configs created before sky-server starts, or `spring.config.import` will fail to pull Nacos config.
 - **Windows JVM `file.encoding` pitfall**: Windows 原生 JDK 17 默认编码为 GBK，而 Nacos 中的 YAML 配置为 UTF-8，编码不一致会导致 YAML 解析失败。**仅 Windows 原生 JDK 需要**在启动前设置 `JAVA_TOOL_OPTIONS`（Git Bash / PowerShell: `$env:`），Linux / WSL / macOS 默认已是 UTF-8，无需此步骤。`application-dev.yml` in the repo is intentionally empty — content lives in Nacos.
 - **JDK 24 is incompatible** — always verify `java -version` before Maven commands.
 - **Seata requires JDK module opens**: `sky-server/pom.xml` 的 `spring-boot-maven-plugin` 已配置 `--add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED`。生产环境 `java -jar` 部署时需手动添加这两个 JVM 参数，否则 Seata 反射访问 `java.lang.reflect.Proxy.h` 会抛 `InaccessibleObjectException`。
-- Sensitive config (credentials, AKSK) belongs in Nacos or the local `docs/` template — never committed. `application-dev.yml` and `docs/` are gitignored.
+- **Druid starter**: 使用 `druid-spring-boot-3-starter`（Boot 3.x 兼容版），非旧版 `druid-spring-boot-starter`（后者在 Boot 3.x 下自动配置不生效）。
+- **Nacos client**: 版本由 SCA 2025.0.0.0 BOM 管理（**3.0.3**），与 Nacos Server v3.0.3 对齐，**不再 pin**。此前"覆盖为 2.5.1 避免 403"的做法已废弃——那个 403/500 (`Handle API Compatibility failed`) 的真实根因是 Nacos 服务端**关闭了认证**导致 v1 登录端点未激活，而非客户端版本不匹配。**开启认证**后登录正常，客户端版本回归 BOM 默认即可。
+- **Nacos 认证**: 服务端 `NACOS_AUTH_ENABLE=true`。客户端凭据由 `.env` 的 `NACOS_USERNAME`/`NACOS_PASSWORD` 提供（`application.yml` 与两份 Nacos 模板中的 Sentinel datasource 均用 `${NACOS_PASSWORD:...}` 占位符）。**本地 dev 运行**（非 Docker，不加载 `.env`）需先 `export NACOS_PASSWORD=SkyNacos@2026` 再 `mvn spring-boot:run`，否则登录 Nacos 失败。
+- Sensitive config (credentials, AKSK) belongs in Nacos with `${ENV_VAR}` placeholders or the local `docs/` template — never committed. `application-dev.yml` and `docs/` are gitignored.
 - `spring-cloud-starter-loadbalancer` is an **explicit** dependency in sky-gateway (optional in Gateway 3.1.x, but `lb://` breaks without it).
 - **`spring-cloud-alibaba-sentinel-gateway` 适配包必须显式声明** in sky-gateway — the starter `spring-cloud-starter-alibaba-sentinel` does NOT pull it transitively. Without it, `com.alibaba.csp.sentinel.adapter.gateway.sc.callback.*` classes are missing and Gateway 限流编译失败.
 - **Seata Server 启动顺序**：Seata Server 应在 sky-server 之前启动（否则 `@GlobalTransactional` 事务会降级为本地事务）。启动顺序：Nacos → MySQL → Seata Server → sky-server → sky-gateway。
-- **DataSourceProxy 不可重复代理**：`SeataDataSourceConfig` 用 `@Primary` 包装 Druid DataSource，确保 MyBatis 使用代理后的连接；不要在别处再次包装 DataSourceProxy。
 
 ## Dependencies Managed by BOM
 

@@ -78,7 +78,7 @@
 
             <dependency>
                 <groupId>com.alibaba</groupId>
-                <artifactId>druid-spring-boot-starter</artifactId>
+                <artifactId>druid-spring-boot-3-starter</artifactId>
                 <version>${druid}</version>
             </dependency>
 
@@ -124,6 +124,8 @@
                 <artifactId>wechatpay-apache-httpclient</artifactId>
                 <version>0.4.8</version>
             </dependency>
+
+            <!-- Nacos Client: 版本由 SCA 2025.0.0.0 BOM 管理 (3.0.3)，与 Nacos Server 3.0.3 对齐，无需 pin -->
         </dependencies>
     </dependencyManagement>
 </project>

@@ -10,9 +10,9 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: 127.0.0.1:8848
-        username: nacos
-        password: nacos
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
     gateway:
       routes:
         - id: sky-server-route
@@ -34,9 +34,9 @@ spring:
       datasource:
         flow:
           nacos:
-            server-addr: 127.0.0.1:8848
-            username: nacos
-            password: nacos
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
             dataId: sky-gateway-flow-rules.json
             groupId: DEFAULT_GROUP
             rule-type: gw-flow

@@ -1,2 +1,0 @@
-# bootstrap-docker.yml 已弃用：配置已合并到 application-docker.yml
-# 改用 spring.config.import 方式加载 Nacos 配置
