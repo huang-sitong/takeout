@@ -1,9 +1,9 @@
 package com.sky.service;
 
-import com.sky.vo.OrderReportVO;
-import com.sky.vo.SalesTop10ReportVO;
-import com.sky.vo.TurnoverReportVO;
-import com.sky.vo.UserReportVO;
+import com.sky.vo.order.OrderReportVO;
+import com.sky.vo.order.SalesTop10ReportVO;
+import com.sky.vo.order.TurnoverReportVO;
+import com.sky.vo.order.UserReportVO;
 
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.LocalDate;

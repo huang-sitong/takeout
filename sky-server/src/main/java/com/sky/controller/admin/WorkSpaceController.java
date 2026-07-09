@@ -2,10 +2,10 @@ package com.sky.controller.admin;
 
 import com.sky.result.Result;
 import com.sky.service.WorkspaceService;
-import com.sky.vo.BusinessDataVO;
-import com.sky.vo.DishOverViewVO;
-import com.sky.vo.OrderOverViewVO;
-import com.sky.vo.SetmealOverViewVO;
+import com.sky.vo.order.BusinessDataVO;
+import com.sky.vo.menu.DishOverViewVO;
+import com.sky.vo.order.OrderOverViewVO;
+import com.sky.vo.menu.SetmealOverViewVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;

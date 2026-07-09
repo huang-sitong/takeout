@@ -38,7 +38,7 @@
         where id = #{id}
     </update>
 
-    <select id="pageQuery" resultType="com.sky.vo.SetmealVO">
+    <select id="pageQuery" resultType="com.sky.vo.menu.SetmealVO">
         select
         s.*,c.name categoryName
         from

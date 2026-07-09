@@ -1,9 +1,9 @@
 package com.sky.service;
 
-import com.sky.vo.BusinessDataVO;
-import com.sky.vo.DishOverViewVO;
-import com.sky.vo.OrderOverViewVO;
-import com.sky.vo.SetmealOverViewVO;
+import com.sky.vo.order.BusinessDataVO;
+import com.sky.vo.menu.DishOverViewVO;
+import com.sky.vo.order.OrderOverViewVO;
+import com.sky.vo.menu.SetmealOverViewVO;
 import java.time.LocalDateTime;
 
 public interface WorkspaceService {

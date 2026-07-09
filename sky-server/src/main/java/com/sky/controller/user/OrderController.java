@@ -1,13 +1,13 @@
 package com.sky.controller.user;
 
-import com.sky.dto.OrdersPaymentDTO;
-import com.sky.dto.OrdersSubmitDTO;
+import com.sky.dto.order.OrdersPaymentDTO;
+import com.sky.dto.order.OrdersSubmitDTO;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.OrderService;
-import com.sky.vo.OrderPaymentVO;
-import com.sky.vo.OrderSubmitVO;
-import com.sky.vo.OrderVO;
+import com.sky.vo.order.OrderPaymentVO;
+import com.sky.vo.order.OrderSubmitVO;
+import com.sky.vo.order.OrderVO;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.sky.handler.SentinelBlockHandler;
 import lombok.extern.slf4j.Slf4j;

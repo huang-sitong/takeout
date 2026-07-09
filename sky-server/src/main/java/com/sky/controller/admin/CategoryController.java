@@ -1,7 +1,7 @@
 package com.sky.controller.admin;
 
-import com.sky.dto.CategoryDTO;
-import com.sky.dto.CategoryPageQueryDTO;
+import com.sky.dto.menu.CategoryDTO;
+import com.sky.dto.menu.CategoryPageQueryDTO;
 import com.sky.entity.Category;
 import com.sky.result.PageResult;
 import com.sky.result.Result;

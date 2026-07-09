@@ -98,7 +98,7 @@
         </where>
     </select>
 
-    <select id="getSalesTop10" resultType="com.sky.dto.GoodsSalesDTO">
+    <select id="getSalesTop10" resultType="com.sky.dto.order.GoodsSalesDTO">
         select od.name, sum(od.number) num
         from orders o, order_detail od
         where o.id = od.order_id and o.status = 5

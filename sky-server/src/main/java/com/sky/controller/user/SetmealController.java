@@ -4,7 +4,7 @@ import com.sky.constant.StatusConstant;
 import com.sky.entity.Setmeal;
 import com.sky.result.Result;
 import com.sky.service.SetmealService;
-import com.sky.vo.DishItemVO;
+import com.sky.vo.menu.DishItemVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;

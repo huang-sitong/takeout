@@ -3,11 +3,11 @@ package com.sky.handler;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.alibaba.csp.sentinel.slots.block.degrade.DegradeException;
 import com.alibaba.csp.sentinel.slots.block.flow.FlowException;
-import com.sky.dto.OrdersCancelDTO;
-import com.sky.dto.OrdersConfirmDTO;
-import com.sky.dto.OrdersPaymentDTO;
-import com.sky.dto.OrdersRejectionDTO;
-import com.sky.dto.OrdersSubmitDTO;
+import com.sky.dto.order.OrdersCancelDTO;
+import com.sky.dto.order.OrdersConfirmDTO;
+import com.sky.dto.order.OrdersPaymentDTO;
+import com.sky.dto.order.OrdersRejectionDTO;
+import com.sky.dto.order.OrdersSubmitDTO;
 import com.sky.result.Result;
 
 /**
@@ -28,11 +28,11 @@ public class SentinelBlockHandler {
         return Result.error(msg);
     }
 
-    public static Result<com.sky.vo.OrderSubmitVO> submitOrder(OrdersSubmitDTO dto, BlockException ex) {
+    public static Result<com.sky.vo.order.OrderSubmitVO> submitOrder(OrdersSubmitDTO dto, BlockException ex) {
         return fail(ex);
     }
 
-    public static Result<com.sky.vo.OrderPaymentVO> payOrder(OrdersPaymentDTO dto, BlockException ex) {
+    public static Result<com.sky.vo.order.OrderPaymentVO> payOrder(OrdersPaymentDTO dto, BlockException ex) {
         return fail(ex);
     }
 

@@ -1,8 +1,8 @@
 package com.sky.mapper;
 
 import com.github.pagehelper.Page;
-import com.sky.dto.GoodsSalesDTO;
-import com.sky.dto.OrdersPageQueryDTO;
+import com.sky.dto.order.GoodsSalesDTO;
+import com.sky.dto.order.OrdersPageQueryDTO;
 import com.sky.entity.Orders;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;

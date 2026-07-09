@@ -1,14 +1,14 @@
 package com.sky.controller.admin;
 
-import com.sky.dto.OrdersCancelDTO;
-import com.sky.dto.OrdersConfirmDTO;
-import com.sky.dto.OrdersPageQueryDTO;
-import com.sky.dto.OrdersRejectionDTO;
+import com.sky.dto.order.OrdersCancelDTO;
+import com.sky.dto.order.OrdersConfirmDTO;
+import com.sky.dto.order.OrdersPageQueryDTO;
+import com.sky.dto.order.OrdersRejectionDTO;
 import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.OrderService;
-import com.sky.vo.OrderStatisticsVO;
-import com.sky.vo.OrderVO;
+import com.sky.vo.order.OrderStatisticsVO;
+import com.sky.vo.order.OrderVO;
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.sky.handler.SentinelBlockHandler;
 import lombok.extern.slf4j.Slf4j;

@@ -1,7 +1,7 @@
 package com.sky.service.impl;
 
 import com.alibaba.fastjson.JSONObject;
-import com.sky.dto.UserLoginDTO;
+import com.sky.dto.user.UserLoginDTO;
 import com.sky.entity.User;
 import com.sky.exception.LoginFailedException;
 import com.sky.mapper.UserMapper;
