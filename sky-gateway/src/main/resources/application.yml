@@ -14,18 +14,20 @@ spring:
         username: ${NACOS_USERNAME:nacos}
         password: ${NACOS_PASSWORD:nacos}
     gateway:
-      routes:
-        - id: sky-server-route
-          uri: lb://sky-server
-          predicates:
-            - Path=/**
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowedOriginPatterns: "*"
-            allowedMethods: "*"
-            allowedHeaders: "*"
-            allowCredentials: true
+      server:
+        webflux:
+          routes:
+            - id: sky-server-route
+              uri: lb://sky-server
+              predicates:
+                - Path=/**
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns: "*"
+                allowedMethods: "*"
+                allowedHeaders: "*"
+                allowCredentials: true
     sentinel:
       transport:
         dashboard: localhost:8858
@@ -49,3 +51,20 @@ management:
   endpoint:
     health:
       show-details: always
+
+# ============================================================
+# JWT 认证配置 (Phase 7: Gateway 统一校验)
+# 与 sky-server Nacos 配置中的 sky.jwt.* 保持一致
+# ============================================================
+sky:
+  jwt:
+    admin-secret-key: ${SKY_JWT_ADMIN_SECRET:itcast}
+    admin-ttl: 7200000
+    admin-token-name: token
+    user-secret-key: ${SKY_JWT_USER_SECRET:itbast}
+    user-ttl: 7200000
+    user-token-name: authentication
+
+logging:
+  level:
+    com.sky.gateway.filter: DEBUG
