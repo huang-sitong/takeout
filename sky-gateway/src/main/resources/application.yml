@@ -37,10 +37,6 @@ spring:
               uri: lb://sky-order-service
               predicates:
                 - Path=/admin/order/**,/admin/report/**,/admin/workspace/**,/admin/shop/**,/user/order/**,/user/shop/**,/notify/**
-            - id: sky-server-route
-              uri: lb://sky-server
-              predicates:
-                - Path=/**
           globalcors:
             cors-configurations:
               '[/**]':

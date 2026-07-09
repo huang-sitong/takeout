@@ -16,7 +16,6 @@
         <module>sky-common</module>
         <module>sky-pojo</module>
         <module>sky-feign-common</module>
-        <module>sky-server</module>
         <module>sky-gateway</module>
         <module>sky-admin-service</module>
         <module>sky-user-service</module>
