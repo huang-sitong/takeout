@@ -16,7 +16,12 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * jwt令牌校验的拦截器
+ *
+ * @deprecated Phase 7: JWT 校验已迁移至 Gateway {@code JwtAuthGlobalFilter}，
+ *     用户身份通过 {@code UserContextFilter} 从请求头 X-User-Id 读取。
+ *     此类保留供紧急回滚使用。
  */
+@Deprecated
 @Component
 @Slf4j
 public class JwtTokenUserInterceptor implements HandlerInterceptor {
