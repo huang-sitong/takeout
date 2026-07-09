@@ -28,4 +28,10 @@ public interface ShoppingCartService {
      * @param shoppingCartDTO
      */
     void subShoppingCart(ShoppingCartDTO shoppingCartDTO);
+
+    /**
+     * 直接添加购物车条目（供 order-service 再来一单调用）
+     * @param shoppingCart 已填充完整的购物车实体
+     */
+    void addEntity(ShoppingCart shoppingCart);
 }

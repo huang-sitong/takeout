@@ -165,4 +165,15 @@ public class SetmealServiceImpl implements SetmealService {
                 .build();
         setmealMapper.update(setmeal);
     }
+
+    /**
+     * 根据状态统计套餐数量（供 Feign 内部调用）
+     * @param status 套餐状态
+     * @return 套餐数量
+     */
+    public Integer countByStatus(Integer status) {
+        java.util.Map<String, Object> map = new java.util.HashMap<>();
+        map.put("status", status);
+        return setmealMapper.countByMap(map);
+    }
 }

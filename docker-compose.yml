@@ -311,6 +311,43 @@ services:
         condition: service_healthy
 
   # ============================================================
+  # sky-order-service 订单核心微服务（Seata + RocketMQ + Sentinel）
+  # ============================================================
+  sky-order-service:
+    build:
+      context: ./sky-order-service
+      dockerfile: Dockerfile
+    image: sky-order-service:1.0-SNAPSHOT
+    container_name: sky-order-service
+    restart: always
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8086/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      nacos:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seata:
+        condition: service_healthy
+      namesrv:
+        condition: service_healthy
+
+  # ============================================================
   # sky-server 业务服务
   # ============================================================
   sky-server:

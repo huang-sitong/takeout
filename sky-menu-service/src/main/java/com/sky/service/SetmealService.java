@@ -62,4 +62,11 @@ public interface SetmealService {
      * @param id
      */
     void startOrStop(Integer status, Long id);
+
+    /**
+     * 根据状态统计套餐数量（供 Feign 内部调用）
+     * @param status 套餐状态
+     * @return 套餐数量
+     */
+    Integer countByStatus(Integer status);
 }

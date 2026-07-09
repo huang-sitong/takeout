@@ -59,4 +59,22 @@ public class UserController {
         User user = userService.getById(id);
         return Result.success(user);
     }
+
+    /**
+     * 根据日期统计用户数量（供 Feign 内部调用）
+     * @param begin 开始时间（可选）
+     * @param end 结束时间（可选）
+     * @return 用户数量
+     */
+    @GetMapping("/countByDates")
+    public Result<Integer> countByDates(
+            @RequestParam(required = false) java.time.LocalDateTime begin,
+            @RequestParam(required = false) java.time.LocalDateTime end) {
+        log.info("统计用户数量: begin={}, end={}", begin, end);
+        Map<String, Object> map = new HashMap<>();
+        map.put("begin", begin);
+        map.put("end", end);
+        Integer count = userService.countByDates(map);
+        return Result.success(count);
+    }
 }

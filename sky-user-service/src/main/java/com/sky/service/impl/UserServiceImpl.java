@@ -59,6 +59,15 @@ public class UserServiceImpl implements UserService {
     }
 
     /**
+     * 根据日期统计用户数量（供 Feign 内部调用）
+     * @param map 包含 begin / end (LocalDateTime)
+     * @return 用户数量
+     */
+    public Integer countByDates(Map<String, Object> map) {
+        return userMapper.countUserByDates(map);
+    }
+
+    /**
      * 调用微信接口服务
      * @param code
      * @return

@@ -63,4 +63,16 @@ public class ShoppingCartController {
         shoppingCartService.subShoppingCart(shoppingCartDTO);
         return Result.success();
     }
+
+    /**
+     * 直接添加购物车条目（供 order-service 再来一单 Feign 调用）
+     * @param shoppingCart 已填充完整的购物车实体
+     * @return
+     */
+    @PostMapping("/addEntity")
+    public Result addEntity(@RequestBody ShoppingCart shoppingCart) {
+        log.info("直接添加购物车条目:{}", shoppingCart);
+        shoppingCartService.addEntity(shoppingCart);
+        return Result.success();
+    }
 }

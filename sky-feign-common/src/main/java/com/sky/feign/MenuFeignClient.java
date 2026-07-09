@@ -42,4 +42,20 @@ public interface MenuFeignClient {
      */
     @GetMapping("/admin/dish/list")
     Result<List<Dish>> listDishByCategory(@RequestParam("categoryId") Long categoryId);
+
+    /**
+     * 根据状态统计菜品数量（供 order-service workspace/report 调用）
+     * @param status 菜品状态
+     * @return 菜品数量
+     */
+    @GetMapping("/admin/dish/countByStatus")
+    Result<Integer> countDishByStatus(@RequestParam("status") Integer status);
+
+    /**
+     * 根据状态统计套餐数量（供 order-service workspace 调用）
+     * @param status 套餐状态
+     * @return 套餐数量
+     */
+    @GetMapping("/admin/setmeal/countByStatus")
+    Result<Integer> countSetmealByStatus(@RequestParam("status") Integer status);
 }

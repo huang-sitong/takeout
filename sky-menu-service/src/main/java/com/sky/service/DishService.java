@@ -62,4 +62,11 @@ public interface DishService {
      * @param id
      */
     void setDishStatus(Integer status, Long id);
+
+    /**
+     * 根据状态统计菜品数量（供 Feign 内部调用）
+     * @param status 菜品状态
+     * @return 菜品数量
+     */
+    Integer countByStatus(Integer status);
 }

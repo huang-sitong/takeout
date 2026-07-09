@@ -102,4 +102,14 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         map.put("setmealId", setmealId);
         shoppingCartMapper.delBymap(map);
     }
+
+    /**
+     * 直接添加购物车条目（供 order-service 再来一单调用）
+     * 实体已由调用方填充完整（name/image/amount 等）
+     * @param shoppingCart 已填充完整的购物车实体
+     */
+    public void addEntity(ShoppingCart shoppingCart) {
+        shoppingCart.setCreateTime(LocalDateTime.now());
+        shoppingCartMapper.insert(shoppingCart);
+    }
 }

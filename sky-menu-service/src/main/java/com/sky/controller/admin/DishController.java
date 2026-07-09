@@ -120,6 +120,18 @@ public class DishController {
     }
 
     /**
+     * 根据状态统计菜品数量（供 Feign 内部调用）
+     * @param status 菜品状态
+     * @return 菜品数量
+     */
+    @GetMapping("/countByStatus")
+    public Result<Integer> countByStatus(@RequestParam Integer status) {
+        log.info("统计菜品状态为{}的数量", status);
+        Integer count = dishService.countByStatus(status);
+        return Result.success(count);
+    }
+
+    /**
      * 清理缓存数据
      * @param pattern
      */

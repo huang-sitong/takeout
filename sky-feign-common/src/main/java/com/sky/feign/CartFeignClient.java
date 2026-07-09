@@ -5,6 +5,8 @@ import com.sky.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
@@ -30,4 +32,12 @@ public interface CartFeignClient {
      */
     @DeleteMapping("/user/shoppingCart/clean")
     Result cleanCart();
+
+    /**
+     * 直接添加购物车条目（供 order-service 再来一单使用）
+     * @param shoppingCart 购物车实体
+     * @return
+     */
+    @PostMapping("/user/shoppingCart/addEntity")
+    Result addCartItem(@RequestBody ShoppingCart shoppingCart);
 }

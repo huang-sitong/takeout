@@ -22,6 +22,7 @@
         <module>sky-user-service</module>
         <module>sky-menu-service</module>
         <module>sky-cart-service</module>
+        <module>sky-order-service</module>
     </modules>
     <properties>
         <spring-cloud.version>2025.0.0</spring-cloud.version>

@@ -96,4 +96,16 @@ public class SetmealController {
         setmealService.startOrStop(status, id);
         return Result.success();
     }
+
+    /**
+     * 根据状态统计套餐数量（供 Feign 内部调用）
+     * @param status 套餐状态
+     * @return 套餐数量
+     */
+    @GetMapping("/countByStatus")
+    public Result<Integer> countByStatus(@RequestParam Integer status) {
+        log.info("统计套餐状态为{}的数量", status);
+        Integer count = setmealService.countByStatus(status);
+        return Result.success(count);
+    }
 }
