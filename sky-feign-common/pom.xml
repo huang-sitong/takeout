@@ -24,6 +24,13 @@
             <version>1.0-SNAPSHOT</version>
         </dependency>
 
+        <!-- sky-pojo (Entity/DTO/VO — FeignClient 返回值需要) -->
+        <dependency>
+            <groupId>com.sky</groupId>
+            <artifactId>sky-pojo</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+
         <!-- Servlet API (RequestContextHolder 获取当前请求) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

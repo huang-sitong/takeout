@@ -21,6 +21,10 @@ spring:
               uri: lb://sky-admin-service
               predicates:
                 - Path=/admin/employee/**
+            - id: sky-user-route
+              uri: lb://sky-user-service
+              predicates:
+                - Path=/user/user/**,/user/addressBook/**
             - id: sky-server-route
               uri: lb://sky-server
               predicates:

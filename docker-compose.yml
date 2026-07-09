@@ -216,6 +216,37 @@ services:
         condition: service_healthy
 
   # ============================================================
+  # sky-user-service 用户管理 + 地址簿微服务
+  # ============================================================
+  sky-user-service:
+    build:
+      context: ./sky-user-service
+      dockerfile: Dockerfile
+    image: sky-user-service:1.0-SNAPSHOT
+    container_name: sky-user-service
+    restart: always
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  # ============================================================
   # sky-server 业务服务
   # ============================================================
   sky-server:
