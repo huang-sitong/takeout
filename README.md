@@ -1,259 +1,217 @@
-一个基于 Spring Boot + Spring Cloud Alibaba 的外卖点餐系统，包含管理端和用户端，支持微信小程序点餐、微信支付等功能。
+A Spring Boot + Spring Cloud Alibaba takeout ordering system with admin management and WeChat mini-program user side.
 
-## 项目简介
+## About
 
-苍穹外卖是一个完整的外卖点餐系统，采用前后端分离 + 微服务架构。后端提供 RESTful API，支持管理端（商家管理后台）和用户端（微信小程序）两种客户端。
+Cang Qiong Take-Out is a complete takeout ordering system using front-end/back-end separation + microservice architecture. The backend provides RESTful APIs for both admin (merchant management) and user (WeChat mini-program) clients.
 
-## 技术栈
+## Tech Stack
 
-> **⚡ 已升级至 Spring Boot 3.x**（原 Spring Boot 2.7.3 技术栈）。`javax.*` → `jakarta.*`，JDK 17 起步。
+> Upgraded to Spring Boot 3.x (from Spring Boot 2.7.3). `javax.*` to `jakarta.*`, JDK 17+.
 
-### 后端技术
-- **运行环境**: JDK 17（Jakarta EE 命名空间；JDK 24 不兼容 Lombok）
-- **核心框架**: Spring Boot 3.5.0
-- **微服务治理**: Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0
-- **注册中心 & 配置中心**: Nacos 3.0.3（**已开启认证**，控制台独立端口 8849）
-- **API 网关**: Spring Cloud Gateway (WebFlux/Netty)
-- **流量控制 & 熔断降级**: Sentinel 1.8.9 (两层限流 + 慢调用/异常比例熔断)
-- **分布式事务**: Seata 2.5.0 (AT 模式，SCA 2025 自动代理 DataSource + undo_log)
-- **消息队列**: RocketMQ 5.3.1 (rocketmq-spring-boot-starter 2.3.4，替代 WebSocket 订单通知)
-- **持久层**: MyBatis (mybatis-spring-boot-starter 3.0.5)
-- **数据库**: MySQL
-- **缓存**: Redis (Lettuce，配置键 `spring.data.redis.*`)
-- **连接池**: Druid 1.2.23 (`druid-spring-boot-3-starter`，Boot 3.x 兼容版)
-- **分页插件**: PageHelper 2.1.1
-- **认证授权**: JWT (jjwt 0.12.6)
-- **接口文档**: OpenAPI Spec (见 `openAPI_Spec/` 目录)
-- **对象存储**: 阿里云 OSS (aliyun-sdk-oss 3.17.4)
-- **支付**: 微信支付
-- **其他**: Lombok 1.18.38, Fastjson 2.0.53, Apache POI 5.2.5
+### Backend
+- **Runtime**: JDK 17 (Jakarta EE namespace; JDK 24 incompatible with Lombok)
+- **Core Framework**: Spring Boot 3.5.0
+- **Microservice Governance**: Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0
+- **Registry & Config**: Nacos 3.0.3 (authentication enabled, console on port 8849)
+- **API Gateway**: Spring Cloud Gateway (WebFlux/Netty)
+- **Rate Limiting & Circuit Breaking**: Sentinel 1.8.9 (two-tier flow control + degrade rules)
+- **Distributed Transactions**: Seata 2.5.0 (AT mode, SCA 2025 auto-proxy DataSource + undo_log)
+- **Message Queue**: RocketMQ 5.3.1 (rocketmq-spring-boot-starter 2.3.4)
+- **Persistence**: MyBatis (mybatis-spring-boot-starter 3.0.5)
+- **Database**: MySQL
+- **Cache**: Redis (Lettuce, config key `spring.data.redis.*`)
+- **Connection Pool**: Druid 1.2.23 (`druid-spring-boot-3-starter`, Boot 3.x compatible)
+- **Pagination**: PageHelper 2.1.1
+- **Auth**: JWT (jjwt 0.12.6)
+- **API Docs**: OpenAPI Spec (see `openAPI_Spec/`)
+- **Object Storage**: Alibaba Cloud OSS (aliyun-sdk-oss 3.17.4)
+- **Payment**: WeChat Pay (test-friendly mock implementation)
+- **Other**: Lombok 1.18.38, Fastjson 2.0.53, Apache POI 5.2.5
 
-### 微服务架构
+### Microservice Architecture (Phase 8)
 
-```mermaid
-flowchart LR
-    Browser["浏览器 (:7999)"]
-    Nginx["Nginx"]
-    Gateway["sky-gateway (:8081)"]
-    Server["sky-server (:8080)"]
-    Nacos["Nacos Server (:8848)\n注册中心 + 配置中心"]
-    Sentinel["Sentinel Dashboard (:8858)"]
-    Seata["Seata Server (:8091)\n分布式事务协调器 TC"]
-    RocketMQ["RocketMQ (:9876/10911)\n消息队列"]
-
-    Browser --> Nginx --> Gateway --> Server
-
-    Gateway -.->|服务发现| Nacos
-    Server  -.->|注册 + 配置| Nacos
-    Nacos   -.->|推送规则| Gateway
-    Nacos   -.->|推送规则| Server
-    Sentinel -.->|拉取规则| Nacos
-
-    Server  -.->|分布式事务| Seata
-    Seata  -.->|注册| Nacos
-
-    Server  -.->|生产/消费消息| RocketMQ
-
-    linkStyle 0,1,2 stroke-width:2px,fill:none
+```
+                    sky-gateway (:8081)
+               JWT Auth + Routing + Rate Limit
+              /       |       |       |       \
+             /        |       |       |        \
+    sky-admin    sky-user   sky-menu  sky-cart  sky-order
+     (:8082)      (:8083)    (:8084)   (:8085)   (:8086)
+    employee     user       category   cart      order
+                 address    dish                 report
+                            setmeal              shop
+                            OSS                  Seata + MQ
+         |          |          |        |          |
+         +----------+----------+--------+----> Feign RPC
 ```
 
-| 服务 | 端口 | 说明 |
-|------|:----:|------|
-| Nginx (前端) | 7999 | 静态资源 + API 反向代理 |
-| sky-gateway | 8081 | API 网关，路由 + CORS + 负载均衡 + 限流 |
-| sky-server | 8080 | 业务服务 (Controller/Service/Mapper) + 限流熔断 |
-| Nacos Server | 8848 | 注册中心 + 配置中心 + Sentinel 规则存储（认证已开启） |
-| Nacos 控制台 | 8849 | Nacos 3.x 控制台独立端口（容器 8080 → 主机 8849） |
-| Sentinel Dashboard | 8858 | 流控规则推送 + 实时监控 (可选，非强依赖) |
-| Seata Server | 8091 | 分布式事务协调器 TC (可选，非强依赖) |
-| RocketMQ NameServer | 9876 | 消息队列路由注册 |
-| RocketMQ Broker | 10911 | 消息存储与投递 |
-| RocketMQ Console | 8082 | 消息队列管理控制台 |
-| MySQL | 3306 | 数据库 |
-| Redis | 6379 | 缓存 |
+| Service | Host Port | Container | Database | Description |
+|----------|:---------:|:-----------:|----------|-------------|
+| sky-gateway | 8081 | 8081 | -- | API Gateway, JWT auth + routing + rate limit |
+| sky-admin-service | 8092 | 8082 | sky_admin_db | Employee management |
+| sky-user-service | 8083 | 8083 | sky_user_db | User + address + WeChat login |
+| sky-menu-service | 8084 | 8084 | sky_menu_db | Category/dish/setmeal + OSS |
+| sky-cart-service | 8085 | 8085 | sky_cart_db | Shopping cart (depends on menu) |
+| sky-order-service | 8086 | 8086 | sky_order_db | Order/report/shop + Seata + MQ |
+| Nacos Server | 8848/8849 | 8848/8080 | nacos_config | Registry + config center |
+| Redis | 6379 | 6379 | -- | Cache |
+| Seata Server | 8091 | 8091 | seata | Distributed transaction TC |
+| Sentinel Dashboard | 8858 | 8858 | -- | Flow control dashboard |
+| RocketMQ NameServer | 9876 | 9876 | -- | Message queue routing |
+| RocketMQ Broker | 10911 | 10911 | -- | Message storage & delivery |
+| RocketMQ Console | 8082 | 8080 | -- | Message queue console |
+| MySQL (host) | 3306 | -- | -- | Database |
 
-### 项目结构
+### Project Structure
 
 ```
 sky-take-out
-├── sky-common          # 公共模块
-│   ├── constant        # 常量类
-│   ├── context         # 上下文（ThreadLocal）
-│   ├── enumeration     # 枚举类
-│   ├── exception       # 自定义异常
-│   ├── json            # JSON配置
-│   ├── properties      # 配置属性类 (@RefreshScope 支持动态刷新)
-│   ├── result          # 统一返回结果
-│   └── utils           # 工具类
-├── sky-pojo            # 实体类模块
-│   ├── dto             # 数据传输对象
-│   ├── entity          # 实体类
-│   └── vo              # 视图对象
-├── sky-server          # 业务服务模块
-│   ├── config          # 配置类
-│   ├── controller      # 控制器
-│   │   ├── admin       # 管理端接口
-│   │   ├── user        # 用户端接口
-│   │   └── notify      # 支付回调接口
-│   ├── handler         # 统一异常处理 + Sentinel BlockHandler
-│   ├── interceptor     # 拦截器
-│   ├── mapper          # MyBatis Mapper接口
-│   ├── service         # 业务逻辑层
-│   └── mq               # RocketMQ 消息队列 (生产者+消费者, 替代 WebSocket)
-└── sky-gateway         # API 网关模块
-    ├── config          # Gateway 配置 (Sentinel 限流 + CORS)
-    └── GatewayApplication.java
+├── sky-common              # Common module (utils/constants/exceptions/JWT/OSS/GlobalExceptionHandler)
+├── sky-pojo                # Entity module (DTO/entity/VO, split by bounded context)
+├── sky-feign-common        # OpenFeign config (FeignConfig/Interceptor/ErrorDecoder)
+├── sky-admin-service       # Employee management (:8082, DB sky_admin_db)
+├── sky-user-service        # User + address (:8083, DB sky_user_db)
+├── sky-menu-service        # Menu management (:8084, DB sky_menu_db)
+├── sky-cart-service        # Shopping cart (:8085, DB sky_cart_db, depends on menu)
+├── sky-order-service       # Order core (:8086, DB sky_order_db, depends on all services)
+├── sky-gateway             # API Gateway (WebFlux/Netty, JWT auth + CORS + rate limit)
+└── sky-server              # [Deprecated] Original monolith, kept for reference & rollback
 ```
 
-## 功能特性
+## Features
 
-### 管理端功能
-- **员工管理**: 员工登录/退出、新增/编辑/删除员工、员工分页查询、状态设置
-- **分类管理**: 菜品分类和套餐分类的增删改查
-- **菜品管理**: 菜品新增/编辑/删除/启售/停售、菜品分页查询、菜品口味管理
-- **套餐管理**: 套餐新增/编辑/删除/启售/停售、套餐分页查询
-- **订单管理**: 订单查询/统计/导出、订单状态管理（接单/拒单/取消/完成）
-- **数据统计**: 营业额统计、用户统计、订单统计、销量排名
-- **工作台**: 今日数据概览、订单管理快捷入口
-- **通用功能**: 文件上传（阿里云OSS）
+### Admin Features
+- **Employee Management**: Login/logout, CRUD, pagination, status toggle
+- **Category Management**: Dish & setmeal category CRUD
+- **Dish Management**: CRUD, enable/disable, pagination, flavor management
+- **Setmeal Management**: CRUD, enable/disable, pagination
+- **Order Management**: Query/statistics/export, status management (confirm/reject/cancel/complete)
+- **Data Statistics**: Revenue, user, order stats, sales ranking
+- **Workspace**: Today's overview, quick order management
+- **Common**: File upload (Alibaba Cloud OSS)
 
-### 用户端功能
-- **微信登录**: 基于微信小程序的用户登录
-- **浏览功能**: 分类浏览、菜品浏览、套餐浏览
-- **购物车**: 添加/删除/清空购物车
-- **下单功能**: 用户下单、订单支付（微信支付）
-- **订单管理**: 历史订单查询、订单详情、取消订单、再来一单、催单
-- **地址管理**: 收货地址的增删改查
+### User Features
+- **WeChat Login**: WeChat mini-program based user login
+- **Browsing**: Category/dishes/setmeals browsing
+- **Shopping Cart**: Add/remove/clear cart
+- **Ordering**: Place order, payment (WeChat Pay mock)
+- **Order Management**: History, detail, cancel, reorder, reminder
+- **Address Management**: Address CRUD
 
-### Sentinel 流控熔断
-- **Gateway 层限流**: 全路由 `sky-server-route` 全局 100 QPS，超过返回 HTTP 429 + `Result{code:0,msg:"系统繁忙,请稍后再试"}`
-- **sky-server 层限流**: 7 个核心写接口（下单/支付/取消/接单/拒单/取消/完成）各 5 QPS
-- **熔断降级**: 慢调用 (RT>300ms) + 异常比例 (>50%) 双策略，窗口 10s
-- **规则持久化**: 4 份规则 JSON 存于 Nacos，Dashboard 重启不丢失；模板见 `nacos_config_example/` 目录
-- **统一返回**: 限流/熔断时返回与正常响应结构一致的 `Result{code:0,msg:...}`，前端可无感处理
+### Sentinel Flow Control & Circuit Breaking
+- **Gateway-level**: Global route 100 QPS, excess returns HTTP 429 + `Result{code:0,msg:"System busy"}`
+- **Service-level**: 7 core write APIs (submit/pay/cancel/confirm/reject/cancel/complete) at 5 QPS each
+- **Degrade**: Slow call (RT>300ms) + exception ratio (>50%) dual strategy, 10s window
+- **Rule Persistence**: JSON rules stored in Nacos, survive Dashboard restart
+- **Unified Response**: Flow/degrade returns same `Result{code:0,msg:...}` structure as normal responses
 
-## 快速开始
+## Quick Start
 
-### 环境要求
+### Prerequisites
 - JDK 17+
 - Maven 3.6+
 - MySQL 5.7+
-- **Docker Desktop** — 基础设施 + 应用全部通过 Docker Compose 统一管理
+- Docker Desktop
 
-### 一、Docker Compose 一键部署（推荐）
+### 1. Docker Compose (Recommended)
 
 ```bash
-# 1. 初始化数据库（首次）
-mysql -u root -p < .sql/nacos-mysql.sql          # nacos_config 库（配置中心，全新/2.x升级合一）
-mysql -u root -p < .sql/seata-server.sql         # seata 库（分布式事务 TC 存储）
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS sky_take_out"
-mysql -u root -p sky_take_out < .sql/sky.sql     # 业务库
-mysql -u root -p sky_take_out < .sql/undo_log.sql # Seata AT 模式 undo_log 表（建在业务库）
+# Initialize databases (first time)
+mysql -u root -p < .sql/nacos-mysql.sql          # nacos_config
+mysql -u root -p < .sql/seata-server.sql          # seata
+mysql -u root -p < .sql/split/00-run-all.sql      # 5 microservice databases
 
-# 2. 构建 JAR 包
+# Build all JARs
 mvn package -DskipTests
 
-# 3. 启动全部服务（首次启动前需在 Nacos 中导入配置，见下方 Nacos 配置节）
+# Start all services
 docker compose up -d --build
 
-# 4. 查看状态
+# Check status (12 containers)
 docker compose ps
 
-# 5. 停止
+# Stop
 docker compose down
 ```
 
-| 服务 | 端口 | 说明 |
-|------|:----:|------|
-| sky-gateway | 8081 | API 网关 |
-| sky-server | 8080 | 业务服务 |
-| Nacos | 8848 | 注册中心 + 配置中心（认证已开启） |
-| Nacos 控制台 | 8849 | Nacos 3.x 独立控制台端口 |
-| Redis | 6379 | 缓存 |
-| Seata | 8091 | 分布式事务 TC |
-| Sentinel | 8858 | 流控 Dashboard |
-| RocketMQ NameServer | 9876 | 消息队列路由 |
-| RocketMQ Broker | 10911 | 消息存储投递 |
-| RocketMQ Console | 8082 | 消息队列控制台 |
-| MySQL (宿主机) | 3306 | 数据库 |
-
-### 二、本地开发模式（逐个启动）
+### 2. Local Development Mode
 
 ```bash
-# 1. 启动基础设施
+# Start infrastructure
 docker compose up -d nacos redis seata namesrv broker sentinel
 
-# 2. 注入敏感配置的环境变量（本地 dev 不读 .env，需手动 source）
-#    Nacos 配置里的密钥为 ${ENV_VAR} 占位符，靠环境变量解析
+# Source env vars (local dev doesn't read .env automatically)
 set -a; source .env; set +a
 
-# 3. 启动 sky-server
-mvn -pl sky-server spring-boot:run
-
-# 4. 启动 sky-gateway
+# Start individual services
+mvn -pl sky-admin-service spring-boot:run
+mvn -pl sky-user-service spring-boot:run
+mvn -pl sky-menu-service spring-boot:run
+mvn -pl sky-cart-service spring-boot:run
+mvn -pl sky-order-service spring-boot:run
 mvn -pl sky-gateway spring-boot:run
 ```
 
-> 本地开发时 sky-server 使用 Nacos Data ID `sky-server-dev.yaml`。
-> Docker 部署时使用 `sky-server-docker.yaml`（中间件地址为容器服务名，`.env` 由 compose 的 `env_file` 自动注入）。
->
-> ⚠️ **Windows 原生 JDK** 启动前需设 UTF-8，否则 Nacos 中文 YAML 解析失败：
+> Note: Windows native JDK requires UTF-8 encoding before startup:
 > `export JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"`
 
-### Nacos 配置初始化
+### Nacos Config Initialization
 
-> Nacos 3.x 已开启认证，控制台迁到独立端口 **8849**（旧的 `http://localhost:8848/nacos/` 已废弃）。
+Nacos 3.x has authentication enabled. Console is on independent port **8849**.
 
-**① 首次初始化管理员**（Nacos ≥2.4 无内置 `nacos/nacos`，`users`/`roles` 表默认为空）：
+**First-time admin init** (Nacos >=2.4 has no built-in `nacos/nacos`):
 
 ```bash
 docker compose up -d nacos
-# Nacos 3.x 用 v3 端点，v1 已废弃返回 410
 curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNacos@2026'
 ```
 
-**② 登录控制台** `http://localhost:8849/index.html`，账号 `nacos` / `SkyNacos@2026`，导入 5 个配置文件：
+**Import configs** at `http://localhost:8849/index.html` (login: `nacos` / `SkyNacos@2026`):
 
-| Data ID | 格式 | 来源 | 用途 |
-|---------|------|------|------|
-| `sky-server-dev.yaml` | YAML | `nacos_config_example/nacos-config-sky-server-dev.yaml` | 本地开发 |
-| `sky-server-docker.yaml` | YAML | `nacos_config_example/nacos-config-sky-server-docker.yaml` | Docker 部署 |
-| `sky-server-flow-rules.json` | JSON | `nacos_config_example/nacos-config-sky-server-flow-rules.json` | 流控规则 |
-| `sky-server-degrade-rules.json` | JSON | `nacos_config_example/nacos-config-sky-server-degrade-rules.json` | 熔断规则 |
-| `sky-gateway-flow-rules.json` | JSON | `nacos_config_example/nacos-config-sky-gateway-flow-rules.json` | 网关限流 |
+| Data ID | Format | Source | Purpose |
+|---------|--------|--------|---------|
+| `sky-admin-service-dev.yaml` | YAML | `nacos_config_example/` | Admin service local dev |
+| `sky-admin-service-docker.yaml` | YAML | `nacos_config_example/` | Admin service Docker |
+| `sky-user-service-dev.yaml` | YAML | `nacos_config_example/` | User service local dev |
+| `sky-user-service-docker.yaml` | YAML | `nacos_config_example/` | User service Docker |
+| `sky-menu-service-dev.yaml` | YAML | `nacos_config_example/` | Menu service local dev |
+| `sky-menu-service-docker.yaml` | YAML | `nacos_config_example/` | Menu service Docker |
+| `sky-cart-service-dev.yaml` | YAML | `nacos_config_example/` | Cart service local dev |
+| `sky-cart-service-docker.yaml` | YAML | `nacos_config_example/` | Cart service Docker |
+| `sky-order-service-dev.yaml` | YAML | `nacos_config_example/` | Order service local dev |
+| `sky-order-service-docker.yaml` | YAML | `nacos_config_example/` | Order service Docker |
+| `sky-order-service-flow-rules.json` | JSON | `nacos_config_example/` | Sentinel flow rules |
+| `sky-order-service-degrade-rules.json` | JSON | `nacos_config_example/` | Sentinel degrade rules |
+| `sky-gateway-flow-rules.json` | JSON | `nacos_config_example/` | Gateway rate limit |
 
-> 配置内容持久化在 MySQL `nacos_config` 库，容器重建不丢失。
+> Configs are persisted in MySQL `nacos_config` database. Secrets use `${ENV_VAR:default}` placeholders resolved from gitignored `.env` file at runtime.
 
-**③ 敏感密钥管理**：配置模板中的密钥（OSS AK/SK、微信 secret、百度 AK、DB/Redis 密码、JWT secret）统一用 `${ENV_VAR:默认值}` 占位符，**真实值只存于 gitignored 的 `.env`**，绝不进版本库。
+## API Reference
 
-- **Docker 部署**：`.env` 经 `docker-compose.yml` 的 `env_file` 注入容器，Spring 启动时用容器环境变量解析占位符。
-- **本地开发**：`.env` 不自动加载，需先 `set -a; source .env; set +a`（见上）。
-- 复制一份 `.env` 模板并填入真实密钥即可；`.env` 已在 `.gitignore` 中。
+### Admin APIs (/admin)
+| Module | Path Prefix | Description |
+|--------|-------------|-------------|
+| Employee | /admin/employee | Login, CRUD |
+| Category | /admin/category | Category CRUD |
+| Dish | /admin/dish | Dish CRUD |
+| Setmeal | /admin/setmeal | Setmeal CRUD |
+| Order | /admin/order | Order query, status management |
+| Report | /admin/report | Data statistics |
+| Workspace | /admin/workspace | Today's overview |
+| Shop | /admin/shop | Shop status |
 
-## 接口说明
+### User APIs (/user)
+| Module | Path Prefix | Description |
+|--------|-------------|-------------|
+| Login | /user/user/login | WeChat login |
+| Category | /user/category | Category browsing |
+| Dish | /user/dish | Dish browsing |
+| Setmeal | /user/setmeal | Setmeal browsing |
+| Shopping Cart | /user/shoppingCart | Cart operations |
+| Order | /user/order | Order, payment, query |
+| Address | /user/addressBook | Address management |
+| Shop | /user/shop/status | Shop status |
 
-### 管理端接口 (/admin)
-| 模块 | 路径前缀 | 说明 |
-|------|----------|------|
-| 员工管理 | /admin/employee | 员工登录、CRUD操作 |
-| 分类管理 | /admin/category | 分类增删改查 |
-| 菜品管理 | /admin/dish | 菜品增删改查 |
-| 套餐管理 | /admin/setmeal | 套餐增删改查 |
-| 订单管理 | /admin/order | 订单查询、状态管理 |
-| 数据统计 | /admin/report | 各类数据统计 |
-| 工作台 | /admin/workspace | 今日数据概览 |
+## License
 
-### 用户端接口 (/user)
-| 模块 | 路径前缀 | 说明 |
-|------|----------|------|
-| 用户登录 | /user/user/login | 微信登录 |
-| 分类浏览 | /user/category | 分类查询 |
-| 菜品浏览 | /user/dish | 菜品查询 |
-| 套餐浏览 | /user/setmeal | 套餐查询 |
-| 购物车 | /user/shoppingCart | 购物车操作 |
-| 订单 | /user/order | 下单、支付、查询 |
-| 地址 | /user/addressBook | 地址管理 |
-
-## 许可证
-
-本项目采用 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file
