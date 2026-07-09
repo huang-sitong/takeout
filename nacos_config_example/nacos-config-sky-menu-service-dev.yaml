@@ -33,3 +33,7 @@ sky:
     access-key-id: ${SKY_ALIOSS_AK:PLACEHOLDER}
     access-key-secret: ${SKY_ALIOSS_SK:PLACEHOLDER}
     bucket-name: ${SKY_ALIOSS_BUCKET:nouxiaxia-sky-takeout}
+
+logging:
+  level:
+    com.alibaba.cloud.sentinel.endpoint: WARN

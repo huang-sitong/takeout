@@ -84,3 +84,4 @@ sky:
 logging:
   level:
     com.sky.gateway.filter: DEBUG
+    com.alibaba.cloud.sentinel.endpoint: WARN

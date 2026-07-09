@@ -26,3 +26,7 @@ sky:
     admin-secret-key: ${SKY_JWT_ADMIN_SECRET:itcast}
     admin-ttl: 7200000
     admin-token-name: token
+
+logging:
+  level:
+    com.alibaba.cloud.sentinel.endpoint: WARN

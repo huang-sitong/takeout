@@ -62,3 +62,7 @@ sky:
     address: ${SKY_SHOP_ADDRESS:桂林市灵川县灵田镇桂林电子科技大学花江校区}
   baidu:
     ak: ${SKY_BAIDU_AK:PLACEHOLDER}
+
+logging:
+  level:
+    com.alibaba.cloud.sentinel.endpoint: WARN

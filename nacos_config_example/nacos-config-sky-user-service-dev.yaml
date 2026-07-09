@@ -29,3 +29,7 @@ sky:
   wechat:
     appid: ${SKY_WECHAT_APPID:wx6d0f01e4406a6a97}
     secret: ${SKY_WECHAT_SECRET:PLACEHOLDER}
+
+logging:
+  level:
+    com.alibaba.cloud.sentinel.endpoint: WARN

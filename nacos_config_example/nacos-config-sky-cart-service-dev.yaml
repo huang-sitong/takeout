@@ -20,3 +20,7 @@ spring:
         dashboard: localhost:8858
         port: 8719
       eager: true
+
+logging:
+  level:
+    com.alibaba.cloud.sentinel.endpoint: WARN
