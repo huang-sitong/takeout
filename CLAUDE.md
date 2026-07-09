@@ -80,12 +80,12 @@ Nginx(:7999) → sky-gateway(:8081) → lb://sky-server(:8080)
        Sentinel Dashboard(:8858)   Seata Server(:8091, TC)
 ```
 
-JWT 认证在 **sky-server**（拦截器），网关只做路由 / CORS / 负载均衡。
+JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-User-Id` / `X-User-Role` Header 注入下游；sky-server 的 `UserContextFilter` 读取 Header → `BaseContext`。登录接口的 JWT 签发仍在 sky-server。
 
 ## Key Patterns
 
-- **双端结构**：`controller/admin/`（管理端，`JwtTokenAdminInterceptor`，放行 `/admin/employee/login`）与 `controller/user/`（小程序，`JwtTokenUserInterceptor`，放行 `/user/user/login`、`/user/shop/status`）。
-- **用户上下文**：`BaseContext` 用 `ThreadLocal<Long>` 存当前用户 id，JWT 拦截器从 token 提取并 set，不依赖 HTTP session。
+- **双端结构**：`controller/admin/`（管理端）与 `controller/user/`（小程序端），JWT 校验统一在 Gateway `JwtAuthGlobalFilter` 完成（白名单放行 `/admin/employee/login`、`/user/user/login`、`/user/shop/status`、`/ws/`）。
+- **用户上下文**：`BaseContext` 用 `ThreadLocal<Long>` 存当前用户 id + `ThreadLocal<String>` 存角色（ADMIN/USER）。Gateway 校验 JWT 后注入 `X-User-Id` / `X-User-Role` Header，sky-server 的 `UserContextFilter` 读取并 set，finally 块 `removeAll()` 防泄漏。
 - **统一返回**：`Result<T>{code,msg,data}`（sky-common），`PageResult` 扩展分页。
 - **Nacos Config**：环境配置（datasource/redis/OSS/WeChat）全在 Nacos，本地 `application-dev.yml` 空壳。Data ID `sky-server-${profile}.yaml`，group `DEFAULT_GROUP`，sky-server 启动前必须存在。`application.yml` 用 `spring.config.import: optional:nacos:sky-server-${spring.profiles.active}.yaml` 拉取（替代 Boot 2.x bootstrap.yml）；server-addr 用 `${NACOS_SERVER_ADDR:127.0.0.1:8848}`（Docker 注入 `nacos:8848`）。`AliOssProperties`/`JwtProperties`/`WeChatProperties` 带 `@RefreshScope` 热更新。**Redis key**：Boot 3.x 从 `spring.redis.*` 改 `spring.data.redis.*`（旧键被静默忽略）。
 
