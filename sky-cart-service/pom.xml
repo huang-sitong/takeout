@@ -72,6 +72,12 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
 
+        <!-- Spring Cloud LoadBalancer (OpenFeign lb:// 需要) -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+
         <!-- Spring Cloud Alibaba Nacos Discovery -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
