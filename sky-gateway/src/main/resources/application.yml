@@ -17,6 +17,10 @@ spring:
       server:
         webflux:
           routes:
+            - id: sky-admin-route
+              uri: lb://sky-admin-service
+              predicates:
+                - Path=/admin/employee/**
             - id: sky-server-route
               uri: lb://sky-server
               predicates:

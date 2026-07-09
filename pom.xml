@@ -18,6 +18,7 @@
         <module>sky-feign-common</module>
         <module>sky-server</module>
         <module>sky-gateway</module>
+        <module>sky-admin-service</module>
     </modules>
     <properties>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
