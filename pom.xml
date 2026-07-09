@@ -20,6 +20,7 @@
         <module>sky-gateway</module>
         <module>sky-admin-service</module>
         <module>sky-user-service</module>
+        <module>sky-menu-service</module>
     </modules>
     <properties>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
