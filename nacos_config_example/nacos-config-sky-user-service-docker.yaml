@@ -1,0 +1,35 @@
+# Nacos 配置模板 —— sky-user-service（Docker 部署）
+# Data ID: sky-user-service-docker.yaml
+# Group: DEFAULT_GROUP
+# 配置格式: YAML
+#
+# sky-user-service (:8083) — 用户管理 + 地址簿
+# 数据库: sky_user_db  表: user, address_book
+# JWT: user 端登录签发   微信: code2session 登录
+
+spring:
+  datasource:
+    url: jdbc:mysql://host.docker.internal:3306/sky_user_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: ${SKY_DB_PASSWORD:123456}
+    druid:
+      initial-size: 5
+      max-active: 20
+      min-idle: 5
+      max-wait: 60000
+  cloud:
+    sentinel:
+      transport:
+        dashboard: sentinel:8858
+        port: 8719
+      eager: true
+
+sky:
+  jwt:
+    user-secret-key: ${SKY_JWT_USER_SECRET:itbast}
+    user-ttl: 7200000
+    user-token-name: authentication
+  wechat:
+    appid: ${SKY_WECHAT_APPID:wx6d0f01e4406a6a97}
+    secret: ${SKY_WECHAT_SECRET:PLACEHOLDER}

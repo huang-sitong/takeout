@@ -1,0 +1,35 @@
+# Nacos 配置模板 —— sky-menu-service（本地开发）
+# Data ID: sky-menu-service-dev.yaml
+# Group: DEFAULT_GROUP
+# 配置格式: YAML
+#
+# sky-menu-service (:8084) — 菜品 / 套餐 / 分类管理 + OSS 上传
+# 数据库: sky_menu_db  表: category, dish, dish_flavor, setmeal, setmeal_dish
+# Redis: 菜品/套餐缓存    OSS: 图片上传
+
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/sky_menu_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: ${SKY_DB_PASSWORD:123456}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${SKY_REDIS_PASSWORD:123456}
+      database: 0
+  cloud:
+    sentinel:
+      transport:
+        dashboard: localhost:8858
+        port: 8719
+      eager: true
+
+sky:
+  alioss:
+    endpoint: ${SKY_ALIOSS_ENDPOINT:oss-cn-guangzhou.aliyuncs.com}
+    access-key-id: ${SKY_ALIOSS_AK:PLACEHOLDER}
+    access-key-secret: ${SKY_ALIOSS_SK:PLACEHOLDER}
+    bucket-name: ${SKY_ALIOSS_BUCKET:nouxiaxia-sky-takeout}

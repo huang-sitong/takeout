@@ -1,0 +1,26 @@
+# Nacos 配置模板 —— sky-cart-service（Docker 部署）
+# Data ID: sky-cart-service-docker.yaml
+# Group: DEFAULT_GROUP
+# 配置格式: YAML
+#
+# sky-cart-service (:8085) — 购物车
+# 数据库: sky_cart_db  表: shopping_cart
+# 依赖: sky-menu-service（通过 OpenFeign 获取菜品/套餐信息）
+
+spring:
+  datasource:
+    url: jdbc:mysql://host.docker.internal:3306/sky_cart_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: ${SKY_DB_PASSWORD:123456}
+    druid:
+      initial-size: 5
+      max-active: 20
+      min-idle: 5
+      max-wait: 60000
+  cloud:
+    sentinel:
+      transport:
+        dashboard: sentinel:8858
+        port: 8719
+      eager: true

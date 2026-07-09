@@ -1,0 +1,64 @@
+# Nacos 配置模板 —— sky-order-service（本地开发）
+# Data ID: sky-order-service-dev.yaml
+# Group: DEFAULT_GROUP
+# 配置格式: YAML
+#
+# sky-order-service (:8086) — 订单核心 + 报表 + 工作台 + 店铺管理
+# 数据库: sky_order_db  表: orders, order_detail, undo_log
+# 依赖: 所有其他服务（通过 OpenFeign）
+# 中间件: Redis + RocketMQ + Seata + 微信支付
+
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/sky_order_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: ${SKY_DB_PASSWORD:123456}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${SKY_REDIS_PASSWORD:123456}
+      database: 0
+  cloud:
+    sentinel:
+      transport:
+        dashboard: localhost:8858
+        port: 8719
+      eager: true
+      datasource:
+        flow:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            dataId: sky-order-service-flow-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: flow
+        degrade:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            dataId: sky-order-service-degrade-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: degrade
+
+# RocketMQ 消息队列
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: sky-order-service-producer-group
+    send-message-timeout: 3000
+    retry-times-when-send-failed: 2
+    retry-times-when-send-async-failed: 2
+
+sky:
+  wechat:
+    appid: ${SKY_WECHAT_APPID:wx6d0f01e4406a6a97}
+    secret: ${SKY_WECHAT_SECRET:PLACEHOLDER}
+  shop:
+    address: ${SKY_SHOP_ADDRESS:桂林市灵川县灵田镇桂林电子科技大学花江校区}
+  baidu:
+    ak: ${SKY_BAIDU_AK:PLACEHOLDER}

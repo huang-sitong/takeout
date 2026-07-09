@@ -1,0 +1,28 @@
+# Nacos 配置模板 —— sky-admin-service（本地开发）
+# Data ID: sky-admin-service-dev.yaml
+# Group: DEFAULT_GROUP
+# 配置格式: YAML
+#
+# sky-admin-service (:8082) — 员工管理
+# 数据库: sky_admin_db  表: employee
+# JWT: admin 端登录签发
+
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/sky_admin_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: ${SKY_DB_PASSWORD:123456}
+  cloud:
+    sentinel:
+      transport:
+        dashboard: localhost:8858
+        port: 8719
+      eager: true
+
+sky:
+  jwt:
+    admin-secret-key: ${SKY_JWT_ADMIN_SECRET:itcast}
+    admin-ttl: 7200000
+    admin-token-name: token
