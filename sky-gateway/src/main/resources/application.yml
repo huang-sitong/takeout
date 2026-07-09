@@ -29,6 +29,10 @@ spring:
               uri: lb://sky-menu-service
               predicates:
                 - Path=/admin/category/**,/admin/dish/**,/admin/setmeal/**,/admin/common/**,/user/category/**,/user/dish/**,/user/setmeal/**
+            - id: sky-cart-route
+              uri: lb://sky-cart-service
+              predicates:
+                - Path=/user/shoppingCart/**
             - id: sky-server-route
               uri: lb://sky-server
               predicates:
