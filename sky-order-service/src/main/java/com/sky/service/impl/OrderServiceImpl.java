@@ -106,6 +106,9 @@ public class OrderServiceImpl implements OrderService{
         // 通过 Feign 远程清空购物车
         cartFeignClient.cleanCart();
 
+        // 发送新订单通知到管理端（异步，不阻断主流程）
+        rocketMQProducerService.sendNewOrderNotification(orders.getId(), orders.getNumber(), orders.getAmount().toString());
+
         //构造返回的数据
         OrderSubmitVO orderSubmitVO = OrderSubmitVO.builder()
                 .id(orders.getId())
@@ -203,6 +206,9 @@ public class OrderServiceImpl implements OrderService{
         newOrder.setCancelReason("用户取消");
         newOrder.setCancelTime(LocalDateTime.now());
         orderMapper.update(newOrder);
+
+        // 发送订单取消通知到管理端
+        rocketMQProducerService.sendOrderCancelNotification(order.getId(), "用户取消", "用户");
     }
 
     /**
@@ -290,6 +296,9 @@ public class OrderServiceImpl implements OrderService{
         newOrder.setCancelReason(ordersRejectionDTO.getRejectionReason());
         newOrder.setCancelTime(LocalDateTime.now());
         orderMapper.update(newOrder);
+
+        // 发送订单取消通知（拒单）
+        rocketMQProducerService.sendOrderCancelNotification(order.getId(), ordersRejectionDTO.getRejectionReason(), "商家");
     }
 
     /**
@@ -304,6 +313,9 @@ public class OrderServiceImpl implements OrderService{
         newOrder.setCancelReason(ordersCancelDTO.getCancelReason());
         newOrder.setCancelTime(LocalDateTime.now());
         orderMapper.update(newOrder);
+
+        // 发送订单取消通知（管理员取消）
+        rocketMQProducerService.sendOrderCancelNotification(order.getId(), ordersCancelDTO.getCancelReason(), "管理员");
     }
 
     /**
@@ -335,6 +347,9 @@ public class OrderServiceImpl implements OrderService{
         newOrders.setStatus(Orders.COMPLETED);
         newOrders.setDeliveryTime(LocalDateTime.now());
         orderMapper.update(newOrders);
+
+        // 发送订单完成通知
+        rocketMQProducerService.sendOrderCompleteNotification(orders.getId(), orders.getNumber());
     }
 
     /**

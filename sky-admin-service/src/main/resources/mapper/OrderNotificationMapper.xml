@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.OrderNotificationMapper">
+
+    <resultMap id="BaseResultMap" type="com.sky.entity.OrderNotification">
+        <id property="id" column="id"/>
+        <result property="type" column="type"/>
+        <result property="orderId" column="order_id"/>
+        <result property="content" column="content"/>
+        <result property="msgId" column="msg_id"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.sky.entity.OrderNotification" useGeneratedKeys="true" keyProperty="id">
+        insert into order_notification (type, order_id, content, msg_id, create_time)
+        values (#{type}, #{orderId}, #{content}, #{msgId}, #{createTime})
+    </insert>
+
+    <select id="getByMsgId" parameterType="String" resultMap="BaseResultMap">
+        select * from order_notification where msg_id = #{msgId} limit 1
+    </select>
+
+</mapper>

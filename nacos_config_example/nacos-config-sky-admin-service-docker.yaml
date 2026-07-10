@@ -6,6 +6,7 @@
 # sky-admin-service (:8082) — 员工管理
 # 数据库: sky_admin_db  表: employee
 # JWT: admin 端登录签发
+# 中间件: RocketMQ（消费者，监听订单通知）
 
 spring:
   datasource:
@@ -24,6 +25,10 @@ spring:
         dashboard: sentinel:8858
         port: 8719
       eager: true
+
+# RocketMQ 消费者配置（Docker: namesrv 为容器服务名）
+rocketmq:
+  name-server: namesrv:9876
 
 sky:
   jwt:
