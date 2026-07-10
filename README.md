@@ -46,7 +46,7 @@ graph TB
 
     subgraph 业务服务层["业务服务层"]
         direction TB
-        AdminSvc["sky-admin-service<br/>:8082<br/>──────────────<br/>员工管理<br/>登录/登出/CRUD"]
+        AdminSvc["sky-admin-service<br/>:8082<br/>──────────────<br/>员工管理<br/>登录/登出/CRUD<br/>MQ 消费者（通知审计）"]
         UserSvc["sky-user-service<br/>:8083<br/>──────────────<br/>用户管理<br/>地址簿<br/>微信登录"]
         MenuSvc["sky-menu-service<br/>:8084<br/>──────────────<br/>分类/菜品/套餐<br/>OSS 图片上传"]
         CartSvc["sky-cart-service<br/>:8085<br/>──────────────<br/>购物车<br/>依赖 menu-service"]
@@ -85,7 +85,8 @@ graph TB
     GW --- Nacos
 
     OrderSvc ---|"AT 模式"| Seata
-    OrderSvc ---|"order-notification"| RocketMQ
+    OrderSvc ---|"生产者"| RocketMQ
+    RocketMQ ---|"消费者"| AdminSvc
     OrderSvc ---|"限流熔断"| Sentinel
     MenuSvc --- Redis
 
@@ -115,7 +116,7 @@ graph TB
                           ──OpenFeign──→ sky-menu-service（菜品/套餐）
                           ──OpenFeign──→ sky-cart-service（购物车）
 事务流：sky-order-service ──@GlobalTransactional──→ Seata TC ──协调──→ 5 个数据库的 undo_log 自动回滚
-消息流：订单支付/催单 → RocketMQProducerService → Topic: order-notification → RocketMQConsumerService → 日志记录
+消息流：订单状态变更 → RocketMQProducerService(asyncSend) → Topic: order-notification(5种Tag) → RocketMQConsumerService(admin-service) → order_notification审计表
 ```
 
 ## 项目结构
@@ -142,7 +143,7 @@ sky-take-out
 | 模块 | 端口 | 数据库 | 职责 | 依赖关系 |
 |------|:----:|--------|------|----------|
 | `sky-gateway` | 8081 | — | API 网关，JWT 认证 + 路由 + 限流 | — |
-| `sky-admin-service` | 8082 | `sky_admin_db` | 员工登录/CRUD/状态管理 | — |
+| `sky-admin-service` | 8082 | `sky_admin_db` | 员工登录/CRUD/状态管理 + MQ 消费者（通知审计） | — |
 | `sky-user-service` | 8083 | `sky_user_db` | 用户管理 + 地址簿 + 微信登录 | — |
 | `sky-menu-service` | 8084 | `sky_menu_db` | 分类/菜品/套餐管理 + OSS 上传 | Redis |
 | `sky-cart-service` | 8085 | `sky_cart_db` | 购物车 | menu-service（Feign） |
@@ -192,9 +193,17 @@ sky-take-out
 
 ### 消息队列（RocketMQ）
 
-- **异步通知**：订单支付/催单后，Producer 发送到 Topic `order-notification`
-- **消息类型**：支付成功(type=1)、用户催单(type=2)
-- **容错设计**：发送失败不阻断主流程，仅记录日志
+- **架构**：`sky-order-service`（生产者）→ RocketMQ Broker → `sky-admin-service`（消费者）
+- **Topic/Tag 设计**：单一 Topic `order-notification`，5 种 Tag 区分事件类型
+  - `order-submit`（type=3）：新订单通知
+  - `payment-success`（type=1）：支付成功，提醒接单
+  - `order-cancel`（type=4）：订单取消（用户/商家/管理员）
+  - `order-complete`（type=5）：订单完成
+  - `reminder`（type=2）：用户催单
+- **消息体**：统一用 `OrderNotificationMessage` DTO（`sky-pojo` 的 `com.sky.dto.mq`）
+- **异步发送**：`asyncSend` + `SendCallback`，不阻塞主流程
+- **幂等消费**：`order_notification` 表 `msg_id` 唯一索引，消费者先查后写
+- **审计日志**：消费后写入 `order_notification` 表（`sky_admin_db`），纯后端数据存储
 
 ## 快速开始
 
@@ -311,7 +320,7 @@ mvn -pl sky-gateway spring-boot:run         # :8081
 
 | 数据库 | 表 | 所属服务 |
 |--------|-----|----------|
-| `sky_admin_db` | `employee` | sky-admin-service |
+| `sky_admin_db` | `employee`、`order_notification` | sky-admin-service |
 | `sky_user_db` | `user`、`address_book` | sky-user-service |
 | `sky_menu_db` | `category`、`dish`、`dish_flavor`、`setmeal`、`setmeal_dish` | sky-menu-service |
 | `sky_cart_db` | `shopping_cart` | sky-cart-service |
