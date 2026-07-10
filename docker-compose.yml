@@ -135,6 +135,9 @@ services:
       -n namesrv:9876
       autoCreateTopicEnable=true
       autoCreateSubscriptionGroup=true
+    # brokerIP1=host.docker.internal  # 本地开发（宿主机连接容器）时取消注释
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
     networks:
       - sky-net
     depends_on:
