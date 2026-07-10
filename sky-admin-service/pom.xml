@@ -99,6 +99,12 @@
             <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
         </dependency>
 
+        <!-- WebSocket (JSR 356) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
         <!-- RocketMQ -->
         <dependency>
             <groupId>org.apache.rocketmq</groupId>
