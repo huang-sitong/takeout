@@ -42,7 +42,7 @@ services:
       - "8848:8848"
       - "9848:9848"
       - "9849:9849"
-      - "8849:8080"   # Nacos 3.x 控制台独立端口 (容器 8080 -> 主机 8849, 避开 sky-server 的 8080)
+      - "8849:8080"   # Nacos 3.x 控制台独立端口 (容器 8080 -> 主机 8849)
     environment:
       - MODE=standalone
       - SPRING_DATASOURCE_PLATFORM=mysql

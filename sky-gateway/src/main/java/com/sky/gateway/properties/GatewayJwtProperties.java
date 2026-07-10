@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Gateway 端 JWT 配置（从 application.yml 或 Nacos Config 读取）
- * 与 sky-server 端 sky.jtx 配置结构一致，确保密钥互通
+ * 与各微服务端 sky.jwt 配置结构一致，确保密钥互通
  */
 @Component
 @ConfigurationProperties(prefix = "sky.jwt")

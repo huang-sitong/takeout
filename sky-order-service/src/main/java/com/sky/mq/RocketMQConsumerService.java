@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 @Component
 @RocketMQMessageListener(
     topic = "order-notification",
-    consumerGroup = "sky-server-consumer-group",
+    consumerGroup = "sky-order-consumer-group",
     selectorExpression = "*"
 )
 public class RocketMQConsumerService implements RocketMQListener<String> {

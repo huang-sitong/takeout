@@ -10,7 +10,7 @@ import java.util.Map;
 
 /**
  * Sentinel Gateway 限流配置：
- * 自定义被限流时的响应体，统一返回与 sky-server Result 结构一致的 JSON。
+ * 自定义被限流时的响应体，统一返回与 Result 结构一致的 JSON。
  * 规则通过 Nacos 数据源 (sky-gateway-flow-rules.json) 持久化下发。
  */
 @Configuration

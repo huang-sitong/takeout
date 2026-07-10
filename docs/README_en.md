@@ -75,7 +75,6 @@ sky-take-out
 ├── sky-cart-service        # Shopping cart (:8085, DB sky_cart_db, depends on menu)
 ├── sky-order-service       # Order core (:8086, DB sky_order_db, depends on all services)
 ├── sky-gateway             # API Gateway (WebFlux/Netty, JWT auth + CORS + rate limit)
-└── sky-server              # [Deprecated] Original monolith, kept for reference & rollback
 ```
 
 ## Features

@@ -32,7 +32,7 @@ import java.util.Map;
  * Gateway 全局 JWT 认证过滤器（Phase 7）
  *
  * 统一校验所有请求的 JWT 令牌，将用户身份注入请求头传递给下游服务。
- * 替代原 sky-server 中的 JwtTokenAdminInterceptor / JwtTokenUserInterceptor。
+ * 替代原拦截器方式 (JwtTokenAdminInterceptor / JwtTokenUserInterceptor)，集中处理认证。
  *
  * 优先级: HIGHEST_PRECEDENCE + 1（Sentinel 限流之后，路由转发之前）
  */

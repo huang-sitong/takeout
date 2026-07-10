@@ -31,7 +31,6 @@ docker compose logs -f sky-order-service
 docker compose down                   # 停止
 ```
 
-> Docker 部署 sky-server 用 Nacos Data ID `sky-server-docker.yaml`（非本地 `sky-server-dev.yaml`），首次需在 Nacos 导入，模板 `nacos_config_example/nacos-config-sky-server-docker.yaml`。
 > **本地 dev**（不加载 `.env`）运行前需 `export NACOS_PASSWORD=SkyNacos@2026`，否则登录 Nacos 失败。
 
 ## Infrastructure (Docker Compose)
@@ -53,7 +52,7 @@ docker compose down                   # 停止
 | sky-cart-service | `:8085` | — |
 | sky-order-service | `:8086` | — |
 
-容器镜像：nacos `v3.0.3`（单机，MySQL 后端 `nacos_config` 库，`NACOS_AUTH_ENABLE=true`，控制台 8080→主机 8849）、redis `7-alpine`(AOF)、seata `2.5.0`、sentinel 本地构建 `1.8.9`、rocketmq `apache/rocketmq:5.3.1`(namesrv+broker) + `apacherocketmq/rocketmq-dashboard`。sky-server / sky-gateway 本地构建，`SPRING_PROFILES_ACTIVE=docker`。
+容器镜像：nacos `v3.0.3`（单机，MySQL 后端 `nacos_config` 库，`NACOS_AUTH_ENABLE=true`，控制台 8080→主机 8849）、redis `7-alpine`(AOF)、seata `2.5.0`、sentinel 本地构建 `1.8.9`、rocketmq `apache/rocketmq:5.3.1`(namesrv+broker) + `apacherocketmq/rocketmq-dashboard`。sky-gateway 及各业务服务本地构建，`SPRING_PROFILES_ACTIVE=docker`。
 
 ### Nacos 初始化（认证已开启）
 

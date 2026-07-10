@@ -14,7 +14,7 @@ import com.sky.result.Result;
  * Sentinel @SentinelResource 统一阻塞处理类。
  * 方法签名必须与原 controller 方法逐参数匹配并追加 BlockException 参数，
  * 返回类型与原方法一致。限流/熔断统一返回 Result{code:0, msg:...}。
- * 规则由 Nacos 数据源 (sky-server-flow-rules.json / sky-server-degrade-rules.json) 持久化下发。
+ * 规则由 Nacos 数据源 (sky-order-service-flow-rules.json / sky-order-service-degrade-rules.json) 持久化下发。
  */
 public class SentinelBlockHandler {
 
