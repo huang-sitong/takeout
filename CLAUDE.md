@@ -156,7 +156,7 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **客户端**：`seata.tx-service-group=sky-order-group`（`application.yml`），`@GlobalTransactional` 在 `OrderServiceImpl.submitOrder()`/`payment()`（Service 层，与 Controller 层 `@SentinelResource` 分层避 AOP 冲突）。**表**：`seata` 库 4 张 + `sky_order_db` 库 undo_log（含 `ext` 列）。**非强依赖**：Server 不可用时降级为本地事务。**启动顺序**：Nacos → MySQL → Seata → sky-order-service → 其他服务 → sky-gateway。
 
 ### RocketMQ 消息队列（#4）
-- **架构**：`sky-order-service`（生产者）→ RocketMQ Broker → `sky-admin-service`（消费者）。生产者在订单状态变更时异步发送通知，消费者写入 `order_notification` 审计表。
+- **架构**：`sky-order-service`（生产者）→ RocketMQ Broker → `sky-admin-service`（两个消费者组）。生产者在订单状态变更时异步发送通知。
 - **Topic/Tag 设计**：单一 Topic `order-notification`，5 种 Tag 区分事件类型：
   - `order-submit`（type=3）：新订单通知
   - `payment-success`（type=1）：支付成功，提醒接单
@@ -165,14 +165,18 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
   - `reminder`（type=2）：用户催单
 - **消息体**：统一用 `OrderNotificationMessage` DTO（`sky-pojo` 的 `com.sky.dto.mq`），字段：`type`、`orderId`、`content`、`timestamp`。
 - **异步发送**：`asyncSend` + `SendCallback`，不阻塞主流程；成功记 info 日志，失败记 error 日志（不抛异常，不回滚主事务）。
-- **幂等消费**：`order_notification` 表 `msg_id` 字段设唯一索引，消费者收到消息后先按 `msgId` 查询，存在则跳过。
+- **双消费者组**：
+  - `sky-admin-consumer-group`（集群模式）：幂等消费，写入 `order_notification` 审计表
+  - `admin-ws-broadcast-group`（广播模式）：推送给所有 admin-service 实例的 WebSocket 客户端
+- **幂等消费**：集群消费者通过 `order_notification` 表 `msg_id` 唯一索引实现幂等。
+- **WebSocket 实时推送**：广播消费者（`RocketMQWebSocketConsumer`）接收消息后，通过 `WebSocketServer.sendToAllClient()` 推送到商家端浏览器。广播消费需独立 `instanceName`（`admin-ws-broadcast-instance`），避免与集群消费者共享 MQClient 实例。
 - **Nacos 配置**：`sky-admin-service-dev.yaml` / `docker.yaml` 需配 `rocketmq.name-server`（dev: `127.0.0.1:9876`，docker: `namesrv:9876`）。
 - **通知表**：`order_notification`（`sky_admin_db`），字段 `id, type, order_id, content, msg_id, create_time`；纯审计日志，暂不暴露 API。
 
 ## Constraints & Warnings
 
 - **Gateway 不得依赖 `spring-boot-starter-web`**（Tomcat）——它是 WebFlux/Netty，自包含，不依赖任何业务服务。`spring-cloud-starter-loadbalancer` 必须显式声明（否则 `lb://` 失效）；`spring-cloud-alibaba-sentinel-gateway` 适配包必须显式声明（starter 不传递，缺则网关限流编译失败）。
-- **RocketMQ（#4）**：已替代 WebSocket。`OrderServiceImpl` 经 `RocketMQProducerService` **异步**发订单通知到 Topic `order-notification`（5 种 Tag），`RocketMQConsumerService` 在 **sky-admin-service** 消费并写入 `order_notification` 审计表；发送失败不阻断主流程。消息体统一用 `OrderNotificationMessage` DTO（`sky-pojo` 的 `com.sky.dto.mq`），幂等靠 `msg_id` 唯一索引。
+- **RocketMQ（#4）**：`OrderServiceImpl` 经 `RocketMQProducerService` **异步**发订单通知到 Topic `order-notification`（5 种 Tag），`sky-admin-service` 有两个消费者组：集群消费者写 `order_notification` 审计表，广播消费者推 WebSocket；发送失败不阻断主流程。消息体统一用 `OrderNotificationMessage` DTO（`sky-pojo` 的 `com.sky.dto.mq`），幂等靠 `msg_id` 唯一索引。广播消费者需独立 `instanceName`。
 - **Druid starter**：用 `druid-spring-boot-3-starter`（Boot 3.x 兼容版），非旧版 `druid-spring-boot-starter`（后者自动配置在 Boot 3.x 不生效，会 fallback Hikari）。
 - **Nacos client**：版本由 SCA 2025 BOM 管理（**3.0.3**），对齐 server v3.0.3，**不再 pin**。此前"pin 2.5.1 避免 403"已废弃——`Handle API Compatibility failed` 真实根因是服务端**关闭认证**致 v1 登录端点未激活，非客户端版本；开启认证后正常。
 - **Nacos 认证**：`NACOS_AUTH_ENABLE=true`，客户端凭据由 `.env` 的 `NACOS_USERNAME`/`NACOS_PASSWORD` 提供（`application.yml` 与 Nacos 模板的 Sentinel datasource 用 `${NACOS_PASSWORD:...}` 占位符）。
@@ -192,4 +196,4 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 
 ## TODO: Future Phases
 
-见 `.others/微服务深化改造TODO.md`。已完成 #1 Gateway+Nacos、#2 Sentinel、#3 Seata、#4 RocketMQ、#5 Docker 容器化、#7 JWT 认证中心化、#8 微服务拆分（5 服务 + 全链路测试通过）；剩 #9 WebSocket 实时推送、#6 K8s 编排。
+见 `.others/微服务深化改造TODO.md`。已完成 #1 Gateway+Nacos、#2 Sentinel、#3 Seata、#4 RocketMQ、#5 Docker 容器化、#7 JWT 认证中心化、#8 微服务拆分、#9 WebSocket 实时推送（5 服务 + 全链路测试通过）；剩 #6 K8s 编排。

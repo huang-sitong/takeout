@@ -46,7 +46,7 @@ graph TB
 
     subgraph 业务服务层["业务服务层"]
         direction TB
-        AdminSvc["sky-admin-service<br/>:8082<br/>──────────────<br/>员工管理<br/>登录/登出/CRUD<br/>MQ 消费者（通知审计）"]
+        AdminSvc["sky-admin-service<br/>:8082<br/>──────────────<br/>员工管理<br/>登录/登出/CRUD<br/>MQ 消费者（通知审计）<br/>WebSocket 实时推送"]
         UserSvc["sky-user-service<br/>:8083<br/>──────────────<br/>用户管理<br/>地址簿<br/>微信登录"]
         MenuSvc["sky-menu-service<br/>:8084<br/>──────────────<br/>分类/菜品/套餐<br/>OSS 图片上传"]
         CartSvc["sky-cart-service<br/>:8085<br/>──────────────<br/>购物车<br/>依赖 menu-service"]
@@ -86,7 +86,9 @@ graph TB
 
     OrderSvc ---|"AT 模式"| Seata
     OrderSvc ---|"生产者"| RocketMQ
-    RocketMQ ---|"消费者"| AdminSvc
+    RocketMQ ---|"集群消费者<br/>写DB"| AdminSvc
+    RocketMQ ---|"广播消费者<br/>WebSocket"| AdminSvc
+    AdminSvc ---|"ws://推送"| Admin
     OrderSvc ---|"限流熔断"| Sentinel
     MenuSvc --- Redis
 
@@ -116,7 +118,8 @@ graph TB
                           ──OpenFeign──→ sky-menu-service（菜品/套餐）
                           ──OpenFeign──→ sky-cart-service（购物车）
 事务流：sky-order-service ──@GlobalTransactional──→ Seata TC ──协调──→ 5 个数据库的 undo_log 自动回滚
-消息流：订单状态变更 → RocketMQProducerService(asyncSend) → Topic: order-notification(5种Tag) → RocketMQConsumerService(admin-service) → order_notification审计表
+消息流：订单状态变更 → RocketMQProducerService(asyncSend) → Topic: order-notification(5种Tag) → ┬ RocketMQConsumerService(集群) → order_notification审计表
+                                                                                                                                 └ RocketMQWebSocketConsumer(广播) → WebSocket推送商家端
 ```
 
 ## 项目结构
@@ -193,7 +196,7 @@ sky-take-out
 
 ### 消息队列（RocketMQ）
 
-- **架构**：`sky-order-service`（生产者）→ RocketMQ Broker → `sky-admin-service`（消费者）
+- **架构**：`sky-order-service`（生产者）→ RocketMQ Broker → `sky-admin-service`（两个消费者组）
 - **Topic/Tag 设计**：单一 Topic `order-notification`，5 种 Tag 区分事件类型
   - `order-submit`（type=3）：新订单通知
   - `payment-success`（type=1）：支付成功，提醒接单
@@ -202,8 +205,11 @@ sky-take-out
   - `reminder`（type=2）：用户催单
 - **消息体**：统一用 `OrderNotificationMessage` DTO（`sky-pojo` 的 `com.sky.dto.mq`）
 - **异步发送**：`asyncSend` + `SendCallback`，不阻塞主流程
-- **幂等消费**：`order_notification` 表 `msg_id` 唯一索引，消费者先查后写
-- **审计日志**：消费后写入 `order_notification` 表（`sky_admin_db`），纯后端数据存储
+- **双消费者组**：
+  - `sky-admin-consumer-group`（集群模式）：幂等消费，写入 `order_notification` 审计表
+  - `admin-ws-broadcast-group`（广播模式）：推送给所有 admin-service 实例的 WebSocket 客户端
+- **幂等消费**：集群消费者通过 `order_notification` 表 `msg_id` 唯一索引实现幂等
+- **WebSocket 实时推送**：广播消费者接收消息后，通过 JSR 356 `@ServerEndpoint` 推送到商家端浏览器
 
 ## 快速开始
 
@@ -459,7 +465,7 @@ Docker Compose 已通过 `depends_on` + `healthcheck` 编排好启动依赖，�
 |:----:|------|:----:|
 | Phase 7 | JWT 认证中心化（Gateway 统一校验） | ✅ 已完成 |
 | Phase 8 | 微服务拆分（5 服务 + 全链路测试通过） | ✅ 已完成 |
-| Phase 9 | WebSocket 实时推送（订单状态实时通知） | ⬜ 待实施 |
+| Phase 9 | WebSocket 实时推送（订单状态实时通知） | ✅ 已完成 |
 | Phase 10+ | K8s 编排、链路追踪、CI/CD、灰度发布 | ⬜ 规划中 |
 
 ## 开源协议
