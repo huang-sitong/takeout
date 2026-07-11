@@ -26,7 +26,6 @@
     <properties>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
         <spring-cloud-alibaba.version>2025.0.0.0</spring-cloud-alibaba.version>
-        <spring-ai-alibaba.version>1.1.2.0</spring-ai-alibaba.version>
         <mybatis.spring>3.0.5</mybatis.spring>
         <lombok>1.18.38</lombok>
         <fastjson>2.0.53</fastjson>
@@ -54,15 +53,6 @@
                 <groupId>com.alibaba.cloud</groupId>
                 <artifactId>spring-cloud-alibaba-dependencies</artifactId>
                 <version>${spring-cloud-alibaba.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
-            <!-- Spring AI Alibaba BOM (1.1.2.0 → Spring AI 1.1.2 → Boot 3.5.x) -->
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-ai-alibaba-bom</artifactId>
-                <version>${spring-ai-alibaba.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
