@@ -31,97 +31,6 @@
 | **支付** | 微信支付（测试阶段为模拟实现） | — |
 | **工具库** | Lombok、Fastjson、Apache POI | 1.18.38 / 2.0.53 / 5.2.5 |
 
-## 微服务架构
-
-```mermaid
-graph TB
-    subgraph 客户端["客户端"]
-        Admin["管理端<br/>(Vue SPA)"]
-        WxApp["微信小程序<br/>用户端"]
-    end
-
-    subgraph 网关层["网关层"]
-        GW["sky-gateway<br/>:8081<br/>──────────────<br/>JWT 统一认证<br/>路由转发<br/>CORS 跨域<br/>Sentinel 限流"]
-    end
-
-    subgraph 业务服务层["业务服务层"]
-        direction TB
-        AdminSvc["sky-admin-service<br/>:8082<br/>──────────────<br/>员工管理<br/>登录/登出/CRUD<br/>MQ 消费者（通知审计）<br/>WebSocket 实时推送"]
-        UserSvc["sky-user-service<br/>:8083<br/>──────────────<br/>用户管理<br/>地址簿<br/>微信登录"]
-        MenuSvc["sky-menu-service<br/>:8084<br/>──────────────<br/>分类/菜品/套餐<br/>OSS 图片上传"]
-        CartSvc["sky-cart-service<br/>:8085<br/>──────────────<br/>购物车<br/>依赖 menu-service"]
-        OrderSvc["sky-order-service<br/>:8086<br/>──────────────<br/>订单/报表/店铺<br/>Seata 分布式事务<br/>RocketMQ 消息"]
-    end
-
-    subgraph 中间件层["基础设施层"]
-        Nacos["Nacos 3.0.3<br/>:8848(API)<br/>:8849(控制台)"]
-        Redis["Redis 7<br/>:6379"]
-        Seata["Seata 2.5.0<br/>:8091(TC)<br/>:7091(控制台)"]
-        Sentinel["Sentinel<br/>:8858(Dashboard)"]
-        RocketMQ["RocketMQ 5.3.1<br/>:9876(NS)<br/>:10911(Broker)"]
-        MySQL[("MySQL<br/>:3306<br/>5 个独立数据库")]
-    end
-
-    Admin --> GW
-    WxApp --> GW
-
-    GW -->|"lb://sky-admin-service"| AdminSvc
-    GW -->|"lb://sky-user-service"| UserSvc
-    GW -->|"lb://sky-menu-service"| MenuSvc
-    GW -->|"lb://sky-cart-service"| CartSvc
-    GW -->|"lb://sky-order-service"| OrderSvc
-
-    AdminSvc -.->|"OpenFeign"| OrderSvc
-    UserSvc -.->|"OpenFeign"| OrderSvc
-    MenuSvc -.->|"OpenFeign"| OrderSvc
-    CartSvc -.->|"OpenFeign"| OrderSvc
-    MenuSvc -.->|"OpenFeign"| CartSvc
-
-    AdminSvc --- Nacos
-    UserSvc --- Nacos
-    MenuSvc --- Nacos
-    CartSvc --- Nacos
-    OrderSvc --- Nacos
-    GW --- Nacos
-
-    OrderSvc ---|"AT 模式"| Seata
-    OrderSvc ---|"生产者"| RocketMQ
-    RocketMQ ---|"集群消费者<br/>写DB"| AdminSvc
-    RocketMQ ---|"广播消费者<br/>WebSocket"| AdminSvc
-    AdminSvc ---|"ws://推送"| Admin
-    OrderSvc ---|"限流熔断"| Sentinel
-    MenuSvc --- Redis
-
-    AdminSvc --- MySQL
-    UserSvc --- MySQL
-    MenuSvc --- MySQL
-    CartSvc --- MySQL
-    OrderSvc --- MySQL
-
-    style GW fill:#7B1FA2,color:#fff
-    style AdminSvc fill:#1976D2,color:#fff
-    style UserSvc fill:#1976D2,color:#fff
-    style MenuSvc fill:#1976D2,color:#fff
-    style CartSvc fill:#1976D2,color:#fff
-    style OrderSvc fill:#1976D2,color:#fff
-    style Nacos fill:#E65100,color:#fff
-    style Sentinel fill:#E65100,color:#fff
-    style Seata fill:#E65100,color:#fff
-    style RocketMQ fill:#E65100,color:#fff
-```
-
-### 数据流说明
-
-```
-请求流：客户端 → sky-gateway(JWT校验) → 注入 X-User-Id/X-User-Role → 路由到目标微服务 → UserContextFilter 读取上下文 → 业务处理
-调用流：sky-order-service ──OpenFeign──→ sky-user-service（用户/地址）
-                          ──OpenFeign──→ sky-menu-service（菜品/套餐）
-                          ──OpenFeign──→ sky-cart-service（购物车）
-事务流：sky-order-service ──@GlobalTransactional──→ Seata TC ──协调──→ 5 个数据库的 undo_log 自动回滚
-消息流：订单状态变更 → RocketMQProducerService(asyncSend) → Topic: order-notification(5种Tag) → ┬ RocketMQConsumerService(集群) → order_notification审计表
-                                                                                                                                 └ RocketMQWebSocketConsumer(广播) → WebSocket推送商家端
-```
-
 ## 项目结构
 
 ```
@@ -458,15 +367,6 @@ Nacos → MySQL → Seata → sky-order-service → 其他业务服务 → sky-g
 ```
 
 Docker Compose 已通过 `depends_on` + `healthcheck` 编排好启动依赖，无需手动控制。
-
-## 后续规划
-
-| 阶段 | 内容 | 状态 |
-|:----:|------|:----:|
-| Phase 7 | JWT 认证中心化（Gateway 统一校验） | ✅ 已完成 |
-| Phase 8 | 微服务拆分（5 服务 + 全链路测试通过） | ✅ 已完成 |
-| Phase 9 | WebSocket 实时推送（订单状态实时通知） | ✅ 已完成 |
-| Phase 10+ | K8s 编排、链路追踪、CI/CD、灰度发布 | ⬜ 规划中 |
 
 ## 开源协议
 
