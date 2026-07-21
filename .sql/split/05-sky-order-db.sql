@@ -73,3 +73,24 @@ CREATE TABLE IF NOT EXISTS `undo_log` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `ux_undo_log` (`xid`, `branch_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+
+-- ============================================================
+-- 4. order_async_task（订单异步任务 — 削峰用）
+-- 订单提交快速路径写入，消费者处理完成后更新状态
+-- ============================================================
+DROP TABLE IF EXISTS `order_async_task`;
+CREATE TABLE `order_async_task` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `request_id` varchar(64) COLLATE utf8mb4_bin NOT NULL COMMENT '客户端幂等请求 ID',
+  `user_id` bigint NOT NULL COMMENT '下单用户 ID',
+  `order_number` varchar(64) COLLATE utf8mb4_bin NOT NULL COMMENT '预生成订单号',
+  `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态：0=处理中 1=完成 2=失败',
+  `order_id` bigint DEFAULT NULL COMMENT '处理完成后回填的订单 ID',
+  `error_msg` varchar(500) COLLATE utf8mb4_bin DEFAULT NULL COMMENT '失败时的错误信息',
+  `create_time` datetime NOT NULL COMMENT '创建时间',
+  `update_time` datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_request_id` (`request_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='订单异步任务表';
