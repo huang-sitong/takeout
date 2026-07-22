@@ -4,6 +4,7 @@ import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -14,6 +15,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * 透传到下游微服务，确保微服务调用链路中用户身份不丢失。
  */
 @Slf4j
+@Component
 public class FeignInterceptor implements RequestInterceptor {
 
     @Override
