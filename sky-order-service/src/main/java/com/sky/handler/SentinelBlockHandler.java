@@ -28,7 +28,7 @@ public class SentinelBlockHandler {
         return Result.error(msg);
     }
 
-    public static Result<com.sky.vo.order.OrderSubmitVO> submitOrder(OrdersSubmitDTO dto, BlockException ex) {
+    public static Result submitOrder(OrdersSubmitDTO dto, BlockException ex) {
         return fail(ex);
     }
 
