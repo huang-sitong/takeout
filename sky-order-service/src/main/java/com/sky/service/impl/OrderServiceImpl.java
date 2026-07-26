@@ -20,6 +20,7 @@ import com.sky.result.PageResult;
 import com.sky.result.Result;
 import com.sky.service.OrderService;
 import com.sky.utils.HttpClientUtil;
+import com.sky.utils.SnowflakeUtil;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.order.*;
 import io.seata.spring.annotation.GlobalTransactional;
@@ -118,6 +119,70 @@ public class OrderServiceImpl implements OrderService{
                 .build();
 
         return orderSubmitVO;
+    }
+
+    /**
+     * 异步处理订单创建（削峰消费者调用）
+     *
+     * 迁移自 submitOrder 的业务逻辑，用于后台消费者按速率消费。
+     * 与 submitOrder 不同的是：
+     * - 显式传入 userId（消费者线程无 HTTP 上下文）
+     * - orderNumber 使用雪花算法生成（高并发防重）
+     * - 不返回 VO（处理结果通过 update order_async_task 记录）
+     *
+     * @param requestId 客户端幂等请求 ID
+     * @param userId    下单用户 ID
+     * @param submitDTO 订单提交 DTO
+     */
+    @GlobalTransactional(name = "processOrderCreation", timeoutMills = 60000)
+    @Transactional
+    public void processOrderCreation(String requestId, Long userId, OrdersSubmitDTO submitDTO) {
+        // 通过 Feign 远程获取地址信息
+        Result<AddressBook> addressResult = userFeignClient.getAddressById(submitDTO.getAddressBookId());
+        AddressBook addressBook = addressResult.getData();
+        if (addressBook == null) {
+            throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
+        }
+
+        // 检查是否在配送范围内
+        checkOutOfRange(addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
+
+        // 通过 Feign 远程获取该用户的购物车
+        Result<List<ShoppingCart>> cartResult = cartFeignClient.listByUserId();
+        List<ShoppingCart> shoppingCartList = cartResult.getData();
+        if (shoppingCartList == null || shoppingCartList.isEmpty()) {
+            throw new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
+        }
+
+        // 向订单录入数据传输对象的数据
+        Orders orders = new Orders();
+        BeanUtils.copyProperties(submitDTO, orders);
+        // 补充订单的其他信息
+        orders.setOrderTime(LocalDateTime.now());
+        orders.setStatus(Orders.PENDING_PAYMENT);
+        orders.setPayStatus(Orders.UN_PAID);
+        orders.setNumber(SnowflakeUtil.nextIdStr());
+        orders.setPhone(addressBook.getPhone());
+        orders.setConsignee(addressBook.getConsignee());
+        orders.setUserId(userId);
+        // 向数据库中插入数据
+        orderMapper.insert(orders);
+
+        // 批量插入订单细节信息
+        List<OrderDetail> orderDetailList = new ArrayList<>();
+        for (ShoppingCart cart : shoppingCartList) {
+            OrderDetail orderDetail = new OrderDetail();
+            BeanUtils.copyProperties(cart, orderDetail);
+            orderDetail.setOrderId(orders.getId());
+            orderDetailList.add(orderDetail);
+        }
+        orderDetailMapper.insertBatch(orderDetailList);
+
+        // 通过 Feign 远程清空购物车
+        cartFeignClient.cleanCart();
+
+        // 发送新订单通知到管理端（异步，不阻断主流程）
+        rocketMQProducerService.sendNewOrderNotification(orders.getId(), orders.getNumber(), orders.getAmount().toString());
     }
 
     /**

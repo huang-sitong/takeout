@@ -111,4 +111,13 @@ public interface OrderService {
      * @param id
      */
     void reminder(Long id);
+
+    /**
+     * 异步处理订单创建（削峰消费者调用）
+     *
+     * @param requestId 客户端幂等请求 ID
+     * @param userId    下单用户 ID（消费者线程无 HTTP 上下文，显式传入）
+     * @param submitDTO 订单提交 DTO
+     */
+    void processOrderCreation(String requestId, Long userId, OrdersSubmitDTO submitDTO);
 }
