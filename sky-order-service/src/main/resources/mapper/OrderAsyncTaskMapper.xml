@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.OrderAsyncTaskMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into order_async_task (request_id, user_id, order_number, status, error_msg, create_time, update_time)
+        values (#{requestId}, #{userId}, #{orderNumber}, #{status}, #{errorMsg}, #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="updateCompleted">
+        update order_async_task
+        set status = #{status},
+            order_id = #{orderId},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+    <update id="updateFailed">
+        update order_async_task
+        set status = #{status},
+            error_msg = #{errorMsg},
+            update_time = #{updateTime}
+        where id = #{id}
+    </update>
+
+</mapper>
