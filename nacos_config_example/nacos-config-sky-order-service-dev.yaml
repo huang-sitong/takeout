@@ -53,6 +53,12 @@ rocketmq:
     send-message-timeout: 3000
     retry-times-when-send-failed: 2
     retry-times-when-send-async-failed: 2
+  consumer:
+    group: order-creation-consumer-group
+    consume-thread-min: 5
+    consume-thread-max: 20
+    pull-batch-size: 32
+    max-reconsume-times: 3
 
 sky:
   wechat:
