@@ -1,6 +1,6 @@
 package com.sky.controller;
 
-import com.sky.dto.ChatRequest;
+import com.sky.dto.agent.ChatRequest;
 import com.sky.result.Result;
 import com.sky.service.AgentChatService;
 import lombok.RequiredArgsConstructor;
