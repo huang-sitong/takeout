@@ -351,6 +351,35 @@ services:
         condition: service_healthy
 
   # ============================================================
+  # sky-agent-service AI 智能助手微服务（Spring AI，无 DB）
+  # ============================================================
+  sky-agent-service:
+    build:
+      context: ./sky-agent-service
+      dockerfile: Dockerfile
+    image: sky-agent-service:1.0-SNAPSHOT
+    container_name: sky-agent-service
+    restart: always
+    ports:
+      - "8087:8087"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8087/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  # ============================================================
   # sky-gateway 网关服务
   # ============================================================
   sky-gateway:

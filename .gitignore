@@ -8,3 +8,5 @@ application-dev.yml
 *Test.java
 **/test/
 .env
+# Maven 在 WSL 下误解析 Windows 路径时产生的垃圾目录（历史事故，防复发）
+E:\\*

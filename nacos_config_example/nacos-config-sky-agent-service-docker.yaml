@@ -1,0 +1,32 @@
+# Nacos 配置模板 —— sky-agent-service（Docker 部署）
+# Data ID: sky-agent-service-docker.yaml
+# Group: DEFAULT_GROUP
+# 配置格式: YAML
+#
+# sky-agent-service (:8087) — AI 智能助手（Spring AI / OpenAI 兼容接口）
+# 无数据库；业务数据 Phase B 起经 OpenFeign 从各服务获取
+
+spring:
+  cloud:
+    sentinel:
+      transport:
+        dashboard: sentinel:8858
+        port: 8723
+      eager: true
+
+# Spring AI (OpenAI 兼容接口) — API_KEY 由容器环境变量注入 (compose env_file: .env)
+  ai:
+    openai:
+      base-url: ${BASE_URL:https://opencode.ai/zen/go/v1}
+      api-key: ${API_KEY:}
+      chat:
+        # base-url 已含 /v1，需覆盖 Spring AI 默认路径 /v1/chat/completions，否则拼成 /v1/v1/... → 404
+        completions-path: /chat/completions
+        options:
+          model: deepseek-v4-flash
+          temperature: 0.7
+
+logging:
+  level:
+    com.alibaba.cloud.sentinel.endpoint: WARN
+    org.springframework.ai: info
