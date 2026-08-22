@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-Guidance for Claude Code working in this repo. **Spring Boot 3.5.0 + Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0**（原 Boot 2.7.3 已升级；`javax.*`→`jakarta.*`，JDK 17 起步）。
+Guidance for agent working in this repo. **Spring Boot 3.5.0 + Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0**（原 Boot 2.7.3 已升级；`javax.*`→`jakarta.*`，JDK 17 起步）。
 
 ## Environment
 
