@@ -1,6 +1,8 @@
 package com.sky.controller;
 
+import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.sky.dto.agent.ChatRequest;
+import com.sky.handler.AgentBlockHandler;
 import com.sky.result.Result;
 import com.sky.service.AgentChatService;
 import lombok.RequiredArgsConstructor;
@@ -32,8 +34,10 @@ public class AgentChatController {
 
     /**
      * 同步对话 — POST /user/agent/chat
+     * 资源级限流：LLM 成本高，规则由 Nacos sky-agent-service-flow-rules.json 下发
      */
     @PostMapping("/chat")
+    @SentinelResource(value = "agentChat", blockHandler = "chatBlock", blockHandlerClass = AgentBlockHandler.class)
     public Result<String> chat(@RequestBody ChatRequest request,
                                @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         log.info("Agent sync chat: userId={}, msgLen={}", userId,
@@ -48,6 +52,7 @@ public class AgentChatController {
      * 流式对话 (SSE) — POST /user/agent/chat/stream
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @SentinelResource(value = "agentChatStream", blockHandler = "streamBlock", blockHandlerClass = AgentBlockHandler.class)
     public Flux<String> chatStream(@RequestBody ChatRequest request,
                                    @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         log.info("Agent stream chat: userId={}, msgLen={}", userId,

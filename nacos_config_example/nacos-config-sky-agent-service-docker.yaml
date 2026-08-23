@@ -20,6 +20,16 @@ spring:
         dashboard: sentinel:8858
         port: 8723
       eager: true
+      # LLM 接口成本高：资源级流控规则持久化在 Nacos（agentChat/agentChatStream 各 5 QPS）
+      datasource:
+        flow:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:nacos:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            dataId: sky-agent-service-flow-rules.json
+            groupId: DEFAULT_GROUP
+            rule-type: flow
 
 # Spring AI (OpenAI 兼容接口) — API_KEY 由容器环境变量注入 (compose env_file: .env)
   ai:

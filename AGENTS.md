@@ -151,6 +151,8 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **身份传递链路**（关键）：Gateway 注入 X-User-Id → Controller 取出放入 **ToolContext** → 工具方法 set 进 `BaseContext` → `FeignInterceptor` 回退分支读取透传下游。⚠️ SSE 流式下 Spring AI 工具执行不在 Tomcat 请求线程，`RequestContextHolder` 为空，必须经 ToolContext 显式传递；Feign 调用与工具方法同一调用栈，ThreadLocal 必定有效。
 - 工具返回紧凑 JSON 给 LLM（裁剪图片/时间戳等字段省 token）；错误以 `{"error":...}` 返回而非抛异常，让 LLM 能向用户解释。每个工具 finally 清理 BaseContext 防线程池泄漏。
 - **Phase C 已完成（Redis 多轮会话记忆）**：`com.sky.memory.RedisChatMemory` 实现 Spring AI `ChatMemory` 接口，Redis List 存纯文本 user/assistant 对（key `agent:chat:memory:{userId}`，滑动窗口 20 条 + TTL 7 天）；经 `MessageChatMemoryAdvisor` 自动读写，conversationId = userId。System Prompt 与工具中间消息不入库；记忆读写失败均降级为无记忆不阻断对话。**Nacos 模板已补 `spring.data.redis.*`（dev: localhost / docker: redis），需重新导入配置**。
+- **Sentinel 资源级限流已完成**：`agentChat` / `agentChatStream` 各 5 QPS，`@SentinelResource` + `AgentBlockHandler`（static 方法，SSE 降级返回 Flux 单条提示）；规则持久化 Nacos `sky-agent-service-flow-rules.json`（dev/docker YAML 已配 datasource）。
+- **剩余 TODO**: 端到端联调验证（多轮指代、SSE 流式、限流降级）；前端 SSE 对话界面。
 
 ### Sentinel 流控熔断（#2）
 - **两层限流**：Gateway 按路由资源全局 100 QPS；sky-order-service 用 `@SentinelResource` 标 7 个核心写接口各 5 QPS，resource 名 `submitOrder`/`payOrder`/`userCancelOrder`/`confirmOrder`/`rejectOrder`/`adminCancelOrder`/`completeOrder`。
