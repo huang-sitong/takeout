@@ -86,7 +86,7 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNa
 
 ## Architecture
 
-8-module Maven 多模块（Phase 8 微服务拆分后）：
+9-module Maven 多模块（Phase 8 微服务拆分 + Phase B AI 助手）：
 
 | Module | Purpose |
 |--------|---------|
@@ -98,6 +98,7 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNa
 | `sky-menu-service` | 分类/菜品/套餐 + OSS（端口 8084，DB `sky_menu_db`） |
 | `sky-cart-service` | 购物车（端口 8085，DB `sky_cart_db`，依赖 menu-service） |
 | `sky-order-service` | 订单/报表/店铺 + MQ + Seata（端口 8086，DB `sky_order_db`，依赖所有其他服务） |
+| `sky-agent-service` | AI 点餐助手（端口 8087，无 DB；Spring AI ChatClient + Function Calling，经 Feign 调 menu/cart/order） |
 | `sky-gateway` | Spring Cloud Gateway(WebFlux)，路由 + JWT 认证 + CORS |
 
 ```
@@ -142,6 +143,14 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **Nacos Config**：环境配置（datasource/redis/OSS/WeChat）全在 Nacos，本地 `application-dev.yml` 空壳。5 服务各配 `dev` + `docker` 两份 Nacos YAML，group `DEFAULT_GROUP`。`application.yml` 用 `spring.config.import: optional:nacos:sky-<service>-${spring.profiles.active}.yaml` 拉取；server-addr 用 `${NACOS_SERVER_ADDR:127.0.0.1:8848}`（Docker 注入 `nacos:8848`）。`AliOssProperties`/`JwtProperties`/`WeChatProperties` 带 `@RefreshScope` 热更新。**Redis key**：Boot 3.x 从 `spring.redis.*` 改 `spring.data.redis.*`（旧键被静默忽略）。
 - **OpenFeign 跨服务调用**：`FeignInterceptor` 从 `RequestContextHolder` 获取当前请求的 `X-User-Id`/`X-User-Role` Header，注入 Feign 请求，确保用户上下文跨服务传递。`FeignErrorDecoder` 将 Feign 错误转业务异常。order-service 通过 Feign 调用 user-service（用户/地址）、cart-service（购物车）、menu-service（菜品/套餐）。
 - **支付绕过**：`OrderServiceImpl.payment()` 为测试友好实现，直接构造 `ORDERPAID` 伪响应 → `paySuccess()`，不调用微信支付 API。上线需替换为真实 `WeChatPayUtil` 调用。
+
+### AI 点餐助手（sky-agent-service, :8087）
+- **Phase A 已完成**：Spring AI 1.1.2 `ChatClient` + OpenAI 兼容接口（Nacos `spring.ai.openai.*`，`completions-path` 已覆盖避免 `/v1/v1`），无状态单轮对话；同步 `POST /user/agent/chat` + SSE `POST /user/agent/chat/stream`。
+- **Phase B 已完成（Function Calling 点餐助手）**：工具集 `com.sky.tools.OrderingTools` 8 个 @Tool：getShopStatus / getCategories / getDishes / getSetmeals / getCart / addToCart / removeFromCart / clearCart。**权限刻意止步购物车**——不提供下单/地址簿工具，System Prompt（`AgentChatServiceImpl.ORDERING_SYSTEM_PROMPT`）约束 LLM 引导用户去结算页下单。
+- **菜单查询走用户端 Feign 接口**：`MenuFeignClient.listSellingDishByCategory`(`/user/dish/list`) 只返回起售商品且走 Redis 缓存，与 order-service 内部用的 `/admin/**` 区分。
+- **身份传递链路**（关键）：Gateway 注入 X-User-Id → Controller 取出放入 **ToolContext** → 工具方法 set 进 `BaseContext` → `FeignInterceptor` 回退分支读取透传下游。⚠️ SSE 流式下 Spring AI 工具执行不在 Tomcat 请求线程，`RequestContextHolder` 为空，必须经 ToolContext 显式传递；Feign 调用与工具方法同一调用栈，ThreadLocal 必定有效。
+- 工具返回紧凑 JSON 给 LLM（裁剪图片/时间戳等字段省 token）；错误以 `{"error":...}` 返回而非抛异常，让 LLM 能向用户解释。每个工具 finally 清理 BaseContext 防线程池泄漏。
+- **Phase C TODO**: Redis ChatMemory 多轮会话记忆（点餐天然多轮）；Sentinel 资源级限流（LLM 成本高）。
 
 ### Sentinel 流控熔断（#2）
 - **两层限流**：Gateway 按路由资源全局 100 QPS；sky-order-service 用 `@SentinelResource` 标 7 个核心写接口各 5 QPS，resource 名 `submitOrder`/`payOrder`/`userCancelOrder`/`confirmOrder`/`rejectOrder`/`adminCancelOrder`/`completeOrder`。

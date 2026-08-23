@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
@@ -33,23 +34,27 @@ public class AgentChatController {
      * 同步对话 — POST /user/agent/chat
      */
     @PostMapping("/chat")
-    public Result<String> chat(@RequestBody ChatRequest request) {
-        log.info("Agent sync chat: msgLen={}", request.getMessage() == null ? 0 : request.getMessage().length());
+    public Result<String> chat(@RequestBody ChatRequest request,
+                               @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        log.info("Agent sync chat: userId={}, msgLen={}", userId,
+                request.getMessage() == null ? 0 : request.getMessage().length());
         if (request.getMessage() == null || request.getMessage().isBlank()) {
             return Result.error("消息不能为空");
         }
-        return Result.success(agentChatService.chat(request.getMessage()));
+        return Result.success(agentChatService.chat(request.getMessage(), userId));
     }
 
     /**
      * 流式对话 (SSE) — POST /user/agent/chat/stream
      */
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> chatStream(@RequestBody ChatRequest request) {
-        log.info("Agent stream chat: msgLen={}", request.getMessage() == null ? 0 : request.getMessage().length());
+    public Flux<String> chatStream(@RequestBody ChatRequest request,
+                                   @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        log.info("Agent stream chat: userId={}, msgLen={}", userId,
+                request.getMessage() == null ? 0 : request.getMessage().length());
         if (request.getMessage() == null || request.getMessage().isBlank()) {
             return Flux.just("[消息不能为空]");
         }
-        return agentChatService.chatStream(request.getMessage());
+        return agentChatService.chatStream(request.getMessage(), userId);
     }
 }
