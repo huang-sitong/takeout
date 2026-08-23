@@ -5,8 +5,15 @@
 #
 # sky-agent-service (:8087) — AI 智能助手（Spring AI / OpenAI 兼容接口）
 # 无数据库；业务数据 Phase B 起经 OpenFeign 从各服务获取
+# Phase C 起用 Redis 存多轮会话记忆
 
 spring:
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${SKY_REDIS_PASSWORD:123456}
+      database: 0
   cloud:
     sentinel:
       transport:

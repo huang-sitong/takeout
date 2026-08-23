@@ -1,10 +1,13 @@
 package com.sky.service.impl;
 
 import com.sky.exception.AiServiceException;
+import com.sky.memory.RedisChatMemory;
 import com.sky.service.AgentChatService;
 import com.sky.tools.OrderingTools;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 
@@ -17,7 +20,8 @@ import java.util.Map;
  * userId 经 ToolContext 显式传递给工具——SSE 流式下工具执行不在请求线程，
  * 不能依赖 RequestContextHolder。
  *
- * Phase C TODO: Redis ChatMemory 多轮会话记忆。
+ * Phase C: Redis ChatMemory 多轮会话记忆（conversationId = userId），
+ * 经 MessageChatMemoryAdvisor 自动读写历史，支持"这个换成微辣的"类指代。
  */
 @Slf4j
 @Service
@@ -58,11 +62,20 @@ public class AgentChatServiceImpl implements AgentChatService {
     private final OrderingTools orderingTools;
 
     /**
+     * 会话记忆 advisor（单例可复用，conversationId 经 request params 传入）。
+     * 底层 RedisChatMemory 读写失败均降级不抛异常，不影响对话主流程。
+     */
+    private final MessageChatMemoryAdvisor memoryAdvisor;
+
+    /**
      * Spring AI 自动装配的是原型作用域的 {@link ChatClient.Builder}（非单例 ChatClient），
      * 需在此手动 build。
      */
-    public AgentChatServiceImpl(ChatClient.Builder chatClientBuilder, OrderingTools orderingTools) {
+    public AgentChatServiceImpl(ChatClient.Builder chatClientBuilder,
+                                OrderingTools orderingTools,
+                                RedisChatMemory redisChatMemory) {
         this.orderingTools = orderingTools;
+        this.memoryAdvisor = MessageChatMemoryAdvisor.builder(redisChatMemory).build();
         this.chatClient = chatClientBuilder.build();
     }
 
@@ -74,6 +87,8 @@ public class AgentChatServiceImpl implements AgentChatService {
                     .user(message)
                     .tools(orderingTools)
                     .toolContext(Map.of(OrderingTools.CTX_USER_ID, userId))
+                    .advisors(a -> a.advisors(memoryAdvisor)
+                            .param(ChatMemory.CONVERSATION_ID, String.valueOf(userId)))
                     .call()
                     .content();
             log.info("Agent sync chat done: userId={}, replyLen={}", userId, content == null ? 0 : content.length());
@@ -91,6 +106,8 @@ public class AgentChatServiceImpl implements AgentChatService {
                 .user(message)
                 .tools(orderingTools)
                 .toolContext(Map.of(OrderingTools.CTX_USER_ID, userId))
+                .advisors(a -> a.advisors(memoryAdvisor)
+                        .param(ChatMemory.CONVERSATION_ID, String.valueOf(userId)))
                 .stream()
                 .content()
                 .onErrorResume(e -> {

@@ -150,7 +150,7 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **菜单查询走用户端 Feign 接口**：`MenuFeignClient.listSellingDishByCategory`(`/user/dish/list`) 只返回起售商品且走 Redis 缓存，与 order-service 内部用的 `/admin/**` 区分。
 - **身份传递链路**（关键）：Gateway 注入 X-User-Id → Controller 取出放入 **ToolContext** → 工具方法 set 进 `BaseContext` → `FeignInterceptor` 回退分支读取透传下游。⚠️ SSE 流式下 Spring AI 工具执行不在 Tomcat 请求线程，`RequestContextHolder` 为空，必须经 ToolContext 显式传递；Feign 调用与工具方法同一调用栈，ThreadLocal 必定有效。
 - 工具返回紧凑 JSON 给 LLM（裁剪图片/时间戳等字段省 token）；错误以 `{"error":...}` 返回而非抛异常，让 LLM 能向用户解释。每个工具 finally 清理 BaseContext 防线程池泄漏。
-- **Phase C TODO**: Redis ChatMemory 多轮会话记忆（点餐天然多轮）；Sentinel 资源级限流（LLM 成本高）。
+- **Phase C 已完成（Redis 多轮会话记忆）**：`com.sky.memory.RedisChatMemory` 实现 Spring AI `ChatMemory` 接口，Redis List 存纯文本 user/assistant 对（key `agent:chat:memory:{userId}`，滑动窗口 20 条 + TTL 7 天）；经 `MessageChatMemoryAdvisor` 自动读写，conversationId = userId。System Prompt 与工具中间消息不入库；记忆读写失败均降级为无记忆不阻断对话。**Nacos 模板已补 `spring.data.redis.*`（dev: localhost / docker: redis），需重新导入配置**。
 
 ### Sentinel 流控熔断（#2）
 - **两层限流**：Gateway 按路由资源全局 100 QPS；sky-order-service 用 `@SentinelResource` 标 7 个核心写接口各 5 QPS，resource 名 `submitOrder`/`payOrder`/`userCancelOrder`/`confirmOrder`/`rejectOrder`/`adminCancelOrder`/`completeOrder`。
