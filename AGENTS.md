@@ -148,11 +148,15 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **Phase A 已完成**：Spring AI 1.1.2 `ChatClient` + OpenAI 兼容接口（Nacos `spring.ai.openai.*`，`completions-path` 已覆盖避免 `/v1/v1`），无状态单轮对话；同步 `POST /user/agent/chat` + SSE `POST /user/agent/chat/stream`。
 - **Phase B 已完成（Function Calling 点餐助手）**：工具集 `com.sky.tools.OrderingTools` 8 个 @Tool：getShopStatus / getCategories / getDishes / getSetmeals / getCart / addToCart / removeFromCart / clearCart。**权限刻意止步购物车**——不提供下单/地址簿工具，System Prompt（`AgentChatServiceImpl.ORDERING_SYSTEM_PROMPT`）约束 LLM 引导用户去结算页下单。
 - **菜单查询走用户端 Feign 接口**：`MenuFeignClient.listSellingDishByCategory`(`/user/dish/list`) 只返回起售商品且走 Redis 缓存，与 order-service 内部用的 `/admin/**` 区分。
-- **身份传递链路**（关键）：Gateway 注入 X-User-Id → Controller 取出放入 **ToolContext** → 工具方法 set 进 `BaseContext` → `FeignInterceptor` 回退分支读取透传下游。⚠️ SSE 流式下 Spring AI 工具执行不在 Tomcat 请求线程，`RequestContextHolder` 为空，必须经 ToolContext 显式传递；Feign 调用与工具方法同一调用栈，ThreadLocal 必定有效。
+- **身份传递链路**（关键，联调已验证）：Gateway 注入 X-User-Id → Controller 取出放入 **ToolContext** → 工具方法 set 进 `BaseContext` → `FeignInterceptor` 回退分支读取透传下游。⚠️ SSE 流式下 Spring AI 工具执行可能不在 Tomcat 请求线程，`RequestContextHolder` 为空，必须经 ToolContext 显式传递。
+- **⚠️ FeignInterceptor 必须经 @EnableFeignClients(defaultConfiguration) 注册**：Spring Cloud OpenFeign 2025.0.x 构建客户端只从子上下文收集 RequestInterceptor，主容器 Bean 不生效。此前该类从未被注册，**全局身份透传一直是断的**（order-service 未暴露是因为"再来一单"走 addEntity 自带实体 userId）。现由 `FeignInterceptorConfig`（sky-feign-common）注入 agent/cart/order 三服务。
+- **addToCart 预校验防幻觉**：LLM 多轮后可能编造 dishId（实测出现过），工具先调 menu Feign 校验 id 存在性，无效则返回引导性 error 让 LLM 重查自纠；System Prompt 同步约束 id 必须来自工具返回值。
 - 工具返回紧凑 JSON 给 LLM（裁剪图片/时间戳等字段省 token）；错误以 `{"error":...}` 返回而非抛异常，让 LLM 能向用户解释。每个工具 finally 清理 BaseContext 防线程池泄漏。
 - **Phase C 已完成（Redis 多轮会话记忆）**：`com.sky.memory.RedisChatMemory` 实现 Spring AI `ChatMemory` 接口，Redis List 存纯文本 user/assistant 对（key `agent:chat:memory:{userId}`，滑动窗口 20 条 + TTL 7 天）；经 `MessageChatMemoryAdvisor` 自动读写，conversationId = userId。System Prompt 与工具中间消息不入库；记忆读写失败均降级为无记忆不阻断对话。**Nacos 模板已补 `spring.data.redis.*`（dev: localhost / docker: redis），需重新导入配置**。
 - **Sentinel 资源级限流已完成**：`agentChat` / `agentChatStream` 各 5 QPS，`@SentinelResource` + `AgentBlockHandler`（static 方法，SSE 降级返回 Flux 单条提示）；规则持久化 Nacos `sky-agent-service-flow-rules.json`（dev/docker YAML 已配 datasource）。
-- **剩余 TODO**: 端到端联调验证（多轮指代、SSE 流式、限流降级）；前端 SSE 对话界面。
+- **联调已验证（2026-08-23）**：推荐菜品/加购/口味透传/减购/SSE 流式/多轮记忆跨重启/权限边界（拒绝下单引导结算页）/Redis 滑动窗口 20 条。
+- **cart-service 存量 bug 修复**：`delBymap` 曾缺失 XML statement（sub 接口一直抛 BindingException），已补；list/add 的 user_id 过滤依赖 Header 透传（同上）。
+- **剩余 TODO**: 前端 SSE 对话界面；加购确认策略偏保守（用户明确指定商品+口味后仍会再确认一次，可按需放宽 prompt 规则）。
 
 ### Sentinel 流控熔断（#2）
 - **两层限流**：Gateway 按路由资源全局 100 QPS；sky-order-service 用 `@SentinelResource` 标 7 个核心写接口各 5 QPS，resource 名 `submitOrder`/`payOrder`/`userCancelOrder`/`confirmOrder`/`rejectOrder`/`adminCancelOrder`/`completeOrder`。

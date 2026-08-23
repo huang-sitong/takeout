@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * 中间件: Seata + RocketMQ + Sentinel + Redis
  */
 @Slf4j
-@EnableFeignClients
+@EnableFeignClients(defaultConfiguration = com.sky.feign.FeignInterceptorConfig.class)
 @EnableScheduling
 @EnableDiscoveryClient
 @SpringBootApplication

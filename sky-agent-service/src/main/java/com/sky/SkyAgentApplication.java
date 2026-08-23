@@ -17,7 +17,7 @@ import org.springframework.context.annotation.ComponentScan;
  * LLM 接入配置在 Nacos spring.ai.openai.* (base-url/api-key 经 ${ENV_VAR} 占位符注入)
  */
 @Slf4j
-@EnableFeignClients
+@EnableFeignClients(defaultConfiguration = com.sky.feign.FeignInterceptorConfig.class)
 @EnableDiscoveryClient
 @SpringBootApplication
 @ComponentScan(basePackages = "com.sky")

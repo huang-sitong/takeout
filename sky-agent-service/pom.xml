@@ -92,10 +92,16 @@
             </exclusions>
         </dependency>
 
-        <!-- Sentinel 流控 (AI 接口成本高，Phase B 加资源级限流) -->
+        <!-- Sentinel 流控 (AI 接口成本高，资源级限流；Nacos 数据源需此适配包) -->
         <dependency>
             <groupId>com.alibaba.cloud</groupId>
             <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+        </dependency>
+
+        <!-- Sentinel 规则持久化 Nacos (sentinel.datasource.flow.nacos 必需) -->
+        <dependency>
+            <groupId>com.alibaba.csp</groupId>
+            <artifactId>sentinel-datasource-nacos</artifactId>
         </dependency>
 
         <!-- Spring Boot Actuator: 健康检查 & 优雅停机 -->

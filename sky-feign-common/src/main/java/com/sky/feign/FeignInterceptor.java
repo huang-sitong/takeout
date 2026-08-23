@@ -17,6 +17,12 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * 兼容 AI Agent 场景：SSE 流式对话中 Spring AI 的工具执行可能发生在非 Tomcat 请求线程，
  * 此时 RequestContextHolder 无值，回退读取 BaseContext（工具方法在 Feign 调用前
  * 已将 userId set 进 BaseContext，同一调用栈内 ThreadLocal 必定有效）。
+ *
+ * 注册方式：@EnableFeignClients(defaultConfiguration = FeignInterceptorConfig.class)
+ * 将本类注册到每个 Feign 客户端子上下文（Spring Cloud OpenFeign 2025.0.x 只从
+ * 子上下文收集 RequestInterceptor，主容器 Bean 不生效）。
+ * ⚠️ 此前该类从未被注册，身份透传一直是断的——order-service 未暴露是因为其
+ * "再来一单"走 addEntity 直接携带含 userId 的实体，不依赖 Header。
  */
 @Slf4j
 public class FeignInterceptor implements RequestInterceptor {

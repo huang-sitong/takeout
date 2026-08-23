@@ -10,8 +10,7 @@ import com.sky.feign.CartFeignClient;
 import com.sky.feign.MenuFeignClient;
 import com.sky.feign.ShopFeignClient;
 import com.sky.result.Result;
-import com.sky.vo.menu.DishVO;
-import lombok.RequiredArgsConstructor;
+import com.sky.vo.menu.DishVO;import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
@@ -167,6 +166,19 @@ public class OrderingTools {
             return errorJson("dishId 与 setmealId 必须提供一个");
         }
         return withUser(toolContext, () -> {
+            // 预校验：id 必须真实存在，防止 LLM 幻觉参数导致下游 500
+            if (dishId != null) {
+                DishVO dish = unwrap(menuFeignClient.getDishById(dishId));
+                if (dish == null) {
+                    return errorJson("dishId=" + dishId + " 不存在，请重新调用 getDishes 获取正确的菜品id后再加购");
+                }
+            }
+            if (setmealId != null) {
+                com.sky.vo.menu.SetmealVO setmeal = unwrap(menuFeignClient.getSetmealById(setmealId));
+                if (setmeal == null) {
+                    return errorJson("setmealId=" + setmealId + " 不存在，请重新调用 getSetmeals 获取正确的套餐id后再加购");
+                }
+            }
             ShoppingCart added = unwrap(cartFeignClient.add(buildCartDTO(dishId, setmealId, dishFlavor)));
             return added == null ? Map.of("message", "已加入购物车") : briefCartItem(added, "已加入购物车");
         });
