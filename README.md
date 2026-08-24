@@ -493,17 +493,6 @@ Nacos → MySQL → Seata → sky-order-service → 其他业务服务 → sky-g
 
 Docker Compose 已通过 `depends_on` + `healthcheck` 编排好启动依赖，无需手动控制。
 
-## 后续规划
-
-| 阶段 | 内容 | 状态 |
-|:----:|------|:----:|
-| Phase 7 | JWT 认证中心化（Gateway 统一校验） | ✅ 已完成 |
-| Phase 8 | 微服务拆分（5 服务 + 全链路测试通过） | ✅ 已完成 |
-| Phase 9 | WebSocket 实时推送（订单状态实时通知） | ✅ 已完成 |
-| Phase A~C | AI 点餐助手（Spring AI + Function Calling + Redis 会话记忆 + 限流） | ✅ 已完成 |
-| — | CI/CD（GitHub Actions：CI 编译校验 / CD 镜像发布 GHCR + SSH 部署） | ✅ 已完成 |
-| Phase 10+ | K8s 编排、链路追踪、灰度发布 | ⬜ 规划中 |
-
 ## 开源协议
 
 本项目基于 [MIT License](LICENSE) 开源。
