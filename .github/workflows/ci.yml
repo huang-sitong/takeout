@@ -1,0 +1,51 @@
+# ============================================================
+# CI — 编译打包校验（push main / PR 触发）
+# ============================================================
+# 构建期不依赖 Nacos/MySQL/Redis（配置全部运行时从 Nacos 拉取），
+# 所以 Runner 上无需起任何基础设施。
+# 仓库当前无测试代码（test 目录被 gitignore），先 -DskipTests；
+# 后续补充单元测试后去掉该参数即可。
+# ============================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - '.others/**'
+      - 'docs/**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (JDK 17)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 对应 AGENTS.md 的 JDK 17 要求；Runner 是 Linux，无 Windows GBK 编码问题
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Package all modules
+        run: mvn -B -ntp package -DskipTests
+
+      - name: Upload service JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: service-jars-${{ github.sha }}
+          path: sky-*/target/*.jar
+          retention-days: 3
+          if-no-files-found: error
