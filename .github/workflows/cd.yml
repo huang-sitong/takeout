@@ -36,7 +36,8 @@ concurrency:
 
 env:
   # 参与镜像发布的服务（infra 类 redis/nacos/seata/mq 由服务器自行管理）
-  SERVICES: sky-admin-service sky-user-service sky-menu-service sky-cart-service sky-order-service sky-agent-service sky-gateway sky-sentinel-dashboard
+  # 注意：sentinel 是 compose 服务名，其镜像名是 sky-sentinel-dashboard
+  SERVICES: sky-admin-service sky-user-service sky-menu-service sky-cart-service sky-order-service sky-agent-service sky-gateway sentinel
 
 jobs:
   build-push:

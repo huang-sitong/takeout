@@ -1,5 +1,8 @@
 # ============================================================
-# CI — 编译打包校验（push main / PR 触发）
+# CI — 编译打包校验（任意分支 push / PR 触发）
+# ============================================================
+# 注意：仅监听 main / develop / feature/* / release/* 分支；
+# 其他分支（如 springAI）的 push 不会触发，需要时手动跑或加分支名。
 # ============================================================
 # 构建期不依赖 Nacos/MySQL/Redis（配置全部运行时从 Nacos 拉取），
 # 所以 Runner 上无需起任何基础设施。
@@ -10,13 +13,17 @@ name: CI
 
 on:
   push:
-    branches: [main]
-    paths-ignore:
-      - '**.md'
-      - '.others/**'
-      - 'docs/**'
+    branches:
+      - main
+      - develop
+      - feature/*
+      - release/*
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - develop
+      - feature/*
+      - release/*
   workflow_dispatch:
 
 concurrency:
