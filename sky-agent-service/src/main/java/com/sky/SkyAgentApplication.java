@@ -6,25 +6,24 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 /**
- * sky-order-service 启动类 — 订单核心 + 报表 + 工作台 + 店铺管理微服务
+ * sky-agent-service 启动类 — AI 智能助手微服务
  *
- * 依赖: cart-service / user-service / menu-service（全部通过 Feign 调用）
- * 中间件: Seata + RocketMQ + Sentinel + Redis
+ * 基于 Spring AI (OpenAI 兼容接口) 提供智能对话能力：
+ * - Phase A: 普通对话 (/user/agent/chat 同步 + /user/agent/chat/stream SSE 流式)
+ * - Phase B: Function Calling 工具集，Agent 代表用户调用 user/menu/cart/order 服务
+ *
+ * LLM 接入配置在 Nacos spring.ai.openai.* (base-url/api-key 经 ${ENV_VAR} 占位符注入)
  */
 @Slf4j
 @EnableFeignClients(defaultConfiguration = com.sky.feign.FeignInterceptorConfig.class)
-@EnableScheduling
 @EnableDiscoveryClient
 @SpringBootApplication
-@EnableTransactionManagement
 @ComponentScan(basePackages = "com.sky")
-public class SkyOrderApplication {
+public class SkyAgentApplication {
     public static void main(String[] args) {
-        SpringApplication.run(SkyOrderApplication.class, args);
-        log.info("sky-order-service started on port 8086");
+        SpringApplication.run(SkyAgentApplication.class, args);
+        log.info("sky-agent-service started on port 8087");
     }
 }

@@ -173,7 +173,7 @@ services:
     build:
       context: ./docker/sentinel-dashboard
       dockerfile: Dockerfile
-    image: sky-sentinel-dashboard:1.8.9
+    image: ${REGISTRY_PREFIX:-}sky-sentinel-dashboard:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-sentinel
     restart: always
     ports:
@@ -194,7 +194,7 @@ services:
     build:
       context: ./sky-admin-service
       dockerfile: Dockerfile
-    image: sky-admin-service:1.0-SNAPSHOT
+    image: ${REGISTRY_PREFIX:-}sky-admin-service:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-admin-service
     restart: always
     ports:
@@ -225,7 +225,7 @@ services:
     build:
       context: ./sky-user-service
       dockerfile: Dockerfile
-    image: sky-user-service:1.0-SNAPSHOT
+    image: ${REGISTRY_PREFIX:-}sky-user-service:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-user-service
     restart: always
     ports:
@@ -256,7 +256,7 @@ services:
     build:
       context: ./sky-menu-service
       dockerfile: Dockerfile
-    image: sky-menu-service:1.0-SNAPSHOT
+    image: ${REGISTRY_PREFIX:-}sky-menu-service:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-menu-service
     restart: always
     ports:
@@ -289,7 +289,7 @@ services:
     build:
       context: ./sky-cart-service
       dockerfile: Dockerfile
-    image: sky-cart-service:1.0-SNAPSHOT
+    image: ${REGISTRY_PREFIX:-}sky-cart-service:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-cart-service
     restart: always
     ports:
@@ -320,7 +320,7 @@ services:
     build:
       context: ./sky-order-service
       dockerfile: Dockerfile
-    image: sky-order-service:1.0-SNAPSHOT
+    image: ${REGISTRY_PREFIX:-}sky-order-service:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-order-service
     restart: always
     ports:
@@ -351,13 +351,42 @@ services:
         condition: service_healthy
 
   # ============================================================
+  # sky-agent-service AI 智能助手微服务（Spring AI，无 DB）
+  # ============================================================
+  sky-agent-service:
+    build:
+      context: ./sky-agent-service
+      dockerfile: Dockerfile
+    image: ${REGISTRY_PREFIX:-}sky-agent-service:${IMAGE_TAG:-1.0-SNAPSHOT}
+    container_name: sky-agent-service
+    restart: always
+    ports:
+      - "8087:8087"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8087/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  # ============================================================
   # sky-gateway 网关服务
   # ============================================================
   sky-gateway:
     build:
       context: ./sky-gateway
       dockerfile: Dockerfile
-    image: sky-gateway:1.0-SNAPSHOT
+    image: ${REGISTRY_PREFIX:-}sky-gateway:${IMAGE_TAG:-1.0-SNAPSHOT}
     container_name: sky-gateway
     restart: always
     ports:

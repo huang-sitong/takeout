@@ -26,6 +26,15 @@ spring:
         port: 8719
       eager: true
 
+# Spring AI (OpenAI 兼容接口)
+  ai:
+    openai:
+      base-url: ${BASE_URL:https://opencode.ai/zen/go/v1}
+      api-key: ${API_KEY:}
+      chat:
+        options:
+          model: deepseek-v4-flash
+
 # RocketMQ 消费者配置（Docker: namesrv 为容器服务名）
 rocketmq:
   name-server: namesrv:9876

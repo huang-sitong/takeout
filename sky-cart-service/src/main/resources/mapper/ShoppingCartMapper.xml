@@ -29,6 +29,26 @@
         </foreach>
     </insert>
 
+    <!-- 减购：按 userId+dishId/setmealId(+dishFlavor) 精确删除一条 -->
+    <delete id="delBymap" parameterType="map">
+        delete from shopping_cart
+        <where>
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+            <if test="dishId != null">
+                and dish_id = #{dishId}
+            </if>
+            <if test="setmealId != null">
+                and setmeal_id = #{setmealId}
+            </if>
+            <if test="dishFlavor != null">
+                and dish_flavor = #{dishFlavor}
+            </if>
+        </where>
+        limit 1
+    </delete>
+
     <delete id="delByIdAndTargetId">
         delete from shopping_cart
         <where>

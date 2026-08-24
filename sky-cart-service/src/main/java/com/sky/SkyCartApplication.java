@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
  * 依赖 sky-menu-service（通过 MenuFeignClient 获取菜品/套餐信息）
  */
 @Slf4j
-@EnableFeignClients
+@EnableFeignClients(defaultConfiguration = com.sky.feign.FeignInterceptorConfig.class)
 @EnableDiscoveryClient
 @SpringBootApplication
 @EnableTransactionManagement

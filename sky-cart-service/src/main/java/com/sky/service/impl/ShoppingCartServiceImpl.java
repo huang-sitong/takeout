@@ -100,6 +100,8 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
         map.put("userId", userId);
         map.put("dishId", dishId);
         map.put("setmealId", setmealId);
+        // 同菜品多口味时精确到口味，避免误删其他口味的条目
+        map.put("dishFlavor", shoppingCartDTO.getDishFlavor());
         shoppingCartMapper.delBymap(map);
     }
 

@@ -1,5 +1,6 @@
 package com.sky.feign;
 
+import com.sky.dto.cart.ShoppingCartDTO;
 import com.sky.entity.ShoppingCart;
 import com.sky.result.Result;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -25,6 +26,23 @@ public interface CartFeignClient {
      */
     @GetMapping("/user/shoppingCart/list")
     Result<List<ShoppingCart>> listByUserId();
+
+    /**
+     * 添加商品到购物车（菜品/套餐二选一，可带口味；已存在同条目则数量+1）
+     * 供 agent-service 点餐助手使用
+     * @param shoppingCartDTO 购物车DTO
+     * @return 购物车最新条目
+     */
+    @PostMapping("/user/shoppingCart/add")
+    Result<ShoppingCart> add(@RequestBody ShoppingCartDTO shoppingCartDTO);
+
+    /**
+     * 从购物车减少一个商品（数量减1，减至0删除条目）
+     * @param shoppingCartDTO 购物车DTO
+     * @return
+     */
+    @PostMapping("/user/shoppingCart/sub")
+    Result sub(@RequestBody ShoppingCartDTO shoppingCartDTO);
 
     /**
      * 清空当前用户的购物车

@@ -1,0 +1,49 @@
+server:
+  port: 8087
+  shutdown: graceful
+
+spring:
+  application:
+    name: sky-agent-service
+  profiles:
+    active: dev
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  config:
+    import:
+      - optional:nacos:sky-agent-service-${spring.profiles.active}.yaml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        health-indicator:
+          enabled: true
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        username: ${NACOS_USERNAME:nacos}
+        password: ${NACOS_PASSWORD:nacos}
+        file-extension: yaml
+        health-indicator:
+          enabled: true
+    # AI 接口响应慢，调大 MVC 异步请求超时，避免 SSE 流式输出被容器超时截断
+    mvc:
+      async:
+        request-timeout: 120000
+
+logging:
+  level:
+    com:
+      sky:
+        service: info
+        controller: info
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
