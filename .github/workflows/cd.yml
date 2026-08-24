@@ -76,6 +76,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # compose 服务声明了 env_file: .env，加载模型时要求文件存在；
+      # CI 只打镜像不跑容器，空文件即可，真实凭据在部署服务器的 .env
+      - name: Create placeholder .env
+        run: touch .env
+
       # 通过 compose 的变量注入镜像前缀与版本 tag，
       # 本地开发不受影响（两变量缺省时行为不变）
       - name: Build images
