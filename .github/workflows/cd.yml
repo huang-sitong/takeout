@@ -98,6 +98,11 @@ jobs:
   deploy:
     name: Deploy to server
     needs: build-push
+    # 暂禁部署：尚无部署服务器/未配 DEPLOY_* secrets。
+    # 启用方法：删除下面这行 if，并在仓库 Secrets 配置
+    #   DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY
+    # 服务器侧准备见 README 或对话记录（.env + REGISTRY_PREFIX + docker login ghcr.io）
+    if: false
     runs-on: ubuntu-latest
     # 可选：在 Settings → Environments 给 production 配置审核人/仅限保护分支
     environment: production
