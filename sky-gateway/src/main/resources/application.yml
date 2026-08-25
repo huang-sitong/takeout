@@ -66,6 +66,14 @@ spring:
             dataId: sky-gateway-flow-rules.json
             groupId: DEFAULT_GROUP
             rule-type: gw-flow
+        api-group:
+          nacos:
+            server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+            username: ${NACOS_USERNAME:nacos}
+            password: ${NACOS_PASSWORD:nacos}
+            dataId: sky-gateway-api-group.json
+            groupId: DEFAULT_GROUP
+            rule-type: gw-api-group
 
 management:
   endpoints:

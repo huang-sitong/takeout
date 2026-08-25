@@ -1,0 +1,19 @@
+[
+  {
+    "apiName": "sky-gateway-all",
+    "predicateItems": [
+      {
+        "pattern": "/admin/**",
+        "matchStrategy": 1
+      },
+      {
+        "pattern": "/user/**",
+        "matchStrategy": 1
+      },
+      {
+        "pattern": "/notify/**",
+        "matchStrategy": 1
+      }
+    ]
+  }
+]

@@ -80,7 +80,8 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNa
 | `sky-order-service-docker.yaml` | order 服务 Docker 部署 |
 | `sky-order-service-flow-rules.json` | Sentinel 流控规则 |
 | `sky-order-service-degrade-rules.json` | Sentinel 熔断规则 |
-| `sky-gateway-flow-rules.json` | Gateway 限流规则 |
+| `sky-gateway-flow-rules.json` | Gateway 全局 100 QPS 流控规则 |
+| `sky-gateway-api-group.json` | Gateway 全局限流 API 分组 |
 
 > 敏感字段用 `${ENV_VAR:默认值}` 占位符，真实值只存 gitignored 的 `.env`，应用启动时用容器环境变量解析。配置持久化在 MySQL `nacos_config` 库，容器重建不丢。OpenAPI 写配置需带 `accessToken`（先 `POST /nacos/v3/auth/user/login`）。
 

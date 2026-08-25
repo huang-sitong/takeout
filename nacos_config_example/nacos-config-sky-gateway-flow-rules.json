@@ -1,0 +1,11 @@
+[
+  {
+    "resource": "sky-gateway-all",
+    "resourceMode": 1,
+    "grade": 1,
+    "count": 100,
+    "intervalSec": 1,
+    "controlBehavior": 0,
+    "burst": 0
+  }
+]

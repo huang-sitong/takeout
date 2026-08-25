@@ -147,7 +147,7 @@ sky-take-out
 ├── sky-order-service         订单核心微服务（:8086，数据库 sky_order_db，依赖所有服务）
 ├── sky-agent-service         AI 点餐助手微服务（:8087，无数据库，Spring AI + Redis 会话记忆）
 ├── sky-gateway               网关（WebFlux/Netty，JWT 认证 + 路由 + CORS + 限流）
-├── nacos_config_example/     Nacos 配置模板（12 份 YAML + 3 份 Sentinel 规则 JSON）
+├── nacos_config_example/     Nacos 配置模板（12 份 YAML + 5 份 Sentinel 规则 JSON）
 ├── docker/                   Docker 构建资源（Seata 配置/Sentinel Dashboard Dockefile）
 ├── .sql/                     数据库脚本（Nacos/Seata 建库 + 5 个微服务数据库）
 └── docker-compose.yml        容器编排（14 容器一键部署）
@@ -283,7 +283,7 @@ docker compose up -d nacos
 curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNacos@2026'
 ```
 
-访问控制台 **`http://localhost:8849/index.html`**，使用 `nacos` / `SkyNacos@2026` 登录，导入 15 份配置模板（位于 `nacos_config_example/`）：
+访问控制台 **`http://localhost:8849/index.html`**，使用 `nacos` / `SkyNacos@2026` 登录，导入 17 份配置模板（位于 `nacos_config_example/`）：
 
 | Data ID | 格式 | 用途 |
 |---------|:----:|------|
@@ -302,6 +302,8 @@ curl -X POST 'http://localhost:8848/nacos/v3/auth/user/admin' -d 'password=SkyNa
 | `sky-agent-service-flow-rules.json` | JSON | AI 助手接口 Sentinel 流控规则 |
 | `sky-order-service-flow-rules.json` | JSON | Order 接口 Sentinel 流控规则 |
 | `sky-order-service-degrade-rules.json` | JSON | Order 接口 Sentinel 熔断规则 |
+| `sky-gateway-api-group.json` | JSON | 网关全局限流 API 分组（`/admin/**`、`/user/**`、`/notify/**`） |
+| `sky-gateway-flow-rules.json` | JSON | 网关全局 100 QPS 流控规则（resourceMode=1，关联 API 分组） |
 
 > 敏感字段使用 `${ENV_VAR:默认值}` 占位符，真实值存储在 gitignored 的 `.env` 文件中，容器启动时通过环境变量注入。配置持久化在 MySQL `nacos_config` 库，容器重建不丢失。
 
