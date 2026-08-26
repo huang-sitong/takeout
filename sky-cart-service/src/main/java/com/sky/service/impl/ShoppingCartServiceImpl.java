@@ -15,6 +15,7 @@ import com.sky.vo.menu.SetmealVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -76,8 +77,12 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
     }
 
     /**
-     * 清空购物车
+     * 清空购物车。
+     *
+     * 该方法会被 order-service 的 submitOrder 全局事务通过 Feign 调用，
+     * 本地事务边界用于注册 Seata AT 分支事务。
      */
+    @Transactional(rollbackFor = Exception.class)
     public void clean() {
         Long userId = BaseContext.getCurrentId();
         shoppingCartMapper.cleanShoppingCart(userId);

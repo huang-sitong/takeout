@@ -50,3 +50,13 @@ management:
   endpoint:
     health:
       show-details: always
+
+# Seata 分布式事务：购物车清理作为 order-service 全局事务的参与分支
+seata:
+  enabled: true
+  tx-service-group: sky-order-service-group
+  service:
+    vgroup-mapping:
+      sky-order-service-group: default
+    grouplist:
+      default: 127.0.0.1:8091

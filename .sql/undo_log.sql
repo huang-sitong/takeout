@@ -1,7 +1,9 @@
 -- ============================================================
--- Seata AT 模式 undo_log 表（建在业务库 sky_take_out 中）
+-- Seata AT 模式 undo_log 表（旧单体库 sky_take_out 兼容脚本）
+-- 微服务拆分部署请使用 .sql/split/04-sky-cart-db.sql 与 05-sky-order-db.sql 中的 undo_log
 -- 适用版本：Seata 1.5.x ~ 2.5.0（undo_log 含 ext 列，结构自 1.5.x 起稳定；本项目部署 2.5.0）
 -- 使用方法：
+-- 旧单体用法：
 --   mysql -u root -p sky_take_out < .sql/undo_log.sql
 -- ============================================================
 

@@ -312,6 +312,8 @@ services:
     depends_on:
       nacos:
         condition: service_healthy
+      seata:
+        condition: service_healthy
 
   # ============================================================
   # sky-order-service 订单核心微服务（Seata + RocketMQ + Sentinel）
@@ -328,6 +330,8 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=docker
       - NACOS_SERVER_ADDR=nacos:8848
+      # Seata 故障注入测试开关；默认 none，测试时通过 TEST_SEATA_FAULT_POINT 覆盖
+      - TEST_SEATA_FAULT_POINT=${TEST_SEATA_FAULT_POINT:-none}
     env_file:
       - .env
     extra_hosts:

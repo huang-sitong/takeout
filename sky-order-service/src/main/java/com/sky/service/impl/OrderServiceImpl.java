@@ -22,12 +22,10 @@ import com.sky.service.OrderService;
 import com.sky.utils.HttpClientUtil;
 import com.sky.utils.WeChatPayUtil;
 import com.sky.vo.order.*;
-import io.seata.spring.annotation.GlobalTransactional;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -48,6 +46,8 @@ public class OrderServiceImpl implements OrderService{
     private WeChatPayUtil weChatPayUtil;
     @Autowired
     private RocketMQProducerService rocketMQProducerService;
+    @Autowired
+    private OrderTransactionService orderTransactionService;
 
     @Value("${sky.shop.address}")
     private String shopAddress;
@@ -55,12 +55,14 @@ public class OrderServiceImpl implements OrderService{
     private String ak;
 
     /**
-     * 提交订单
-     * @param ordersSubmitDTO
-     * @return
+     * 提交订单：读取与外部调用在事务外完成，核心写操作交给
+     * {@link OrderTransactionService#submitOrderInTransaction} 执行。
+     *
+     * MQ 通知在全局事务成功返回后发送，避免事务回滚后仍发出新订单通知。
+     *
+     * @param ordersSubmitDTO 下单请求
+     * @return 订单提交结果
      */
-    @GlobalTransactional(name = "submitOrder", timeoutMills = 60000)
-    @Transactional
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO){
         // 通过 Feign 远程获取地址信息
         Result<AddressBook> addressResult = userFeignClient.getAddressById(ordersSubmitDTO.getAddressBookId());
@@ -73,58 +75,30 @@ public class OrderServiceImpl implements OrderService{
         checkOutOfRange(addressBook.getCityName() + addressBook.getDistrictName() +  addressBook.getDetail());
 
         // 通过 Feign 远程获取该用户的购物车
-        Long userId = BaseContext.getCurrentId();
         Result<List<ShoppingCart>> cartResult = cartFeignClient.listByUserId();
         List<ShoppingCart> shoppingCartList = cartResult.getData();
         if(shoppingCartList == null || shoppingCartList.isEmpty()){
             throw new ShoppingCartBusinessException(MessageConstant.SHOPPING_CART_IS_NULL);
         }
-        //向订单录入数据传输对象的数据
-        Orders orders = new Orders();
-        BeanUtils.copyProperties(ordersSubmitDTO,orders);
-        //补充订单的其他信息
-        orders.setOrderTime(LocalDateTime.now());
-        orders.setStatus(Orders.PENDING_PAYMENT);
-        orders.setPayStatus(Orders.UN_PAID);
-        orders.setNumber(String.valueOf(System.currentTimeMillis()));
-        orders.setPhone(addressBook.getPhone());
-        orders.setConsignee(addressBook.getConsignee());
-        orders.setUserId(userId);
-        //向数据库中插入数据
-        orderMapper.insert(orders);
 
-        //批量插入订单细节信息
-        List<OrderDetail> orderDetailList = new ArrayList<>();
-        for(ShoppingCart cart : shoppingCartList){
-            OrderDetail orderDetail = new OrderDetail();
-            BeanUtils.copyProperties(cart,orderDetail);
-            orderDetail.setOrderId(orders.getId());
-            orderDetailList.add(orderDetail);
-        }
-        orderDetailMapper.insertBatch(orderDetailList);
+        // 全局事务：订单写入 + 明细写入 + 清空购物车
+        OrderSubmitVO orderSubmitVO = orderTransactionService.submitOrderInTransaction(
+                ordersSubmitDTO, addressBook, shoppingCartList);
 
-        // 通过 Feign 远程清空购物车
-        cartFeignClient.cleanCart();
-
-        // 发送新订单通知到管理端（异步，不阻断主流程）
-        rocketMQProducerService.sendNewOrderNotification(orders.getId(), orders.getNumber(), orders.getAmount().toString());
-
-        //构造返回的数据
-        OrderSubmitVO orderSubmitVO = OrderSubmitVO.builder()
-                .id(orders.getId())
-                .orderTime(orders.getOrderTime())
-                .orderNumber(orders.getNumber())
-                .orderAmount(orders.getAmount())
-                .build();
+        // 全局事务提交完成后发送新订单通知（异步，不阻断主流程）
+        rocketMQProducerService.sendNewOrderNotification(
+                orderSubmitVO.getId(),
+                orderSubmitVO.getOrderNumber(),
+                orderSubmitVO.getOrderAmount().toString());
 
         return orderSubmitVO;
     }
 
     /**
-     * 订单支付
+     * 订单支付：模拟支付结果，状态更新在全局事务内完成。
+     *
+     * MQ 通知在全局事务成功返回后发送，避免事务回滚后仍发出支付成功通知。
      */
-    @GlobalTransactional(name = "payment", timeoutMills = 60000)
-    @Transactional
     public OrderPaymentVO payment(OrdersPaymentDTO ordersPaymentDTO) throws Exception {
         //绕过微信支付
         JSONObject jsonObject = new JSONObject();
@@ -132,27 +106,21 @@ public class OrderServiceImpl implements OrderService{
         OrderPaymentVO vo = jsonObject.toJavaObject(OrderPaymentVO.class);
         vo.setPackageStr(jsonObject.getString("package"));
 
-        paySuccess(ordersPaymentDTO.getOrderNumber());
+        Orders paidOrder = orderTransactionService.paymentInTransaction(ordersPaymentDTO.getOrderNumber());
+
+        //全局事务提交完成后发送支付成功通知
+        rocketMQProducerService.sendOrderNotification(paidOrder.getId(), 1, "订单号：" + ordersPaymentDTO.getOrderNumber());
         return vo;
     }
 
     /**
-     * 支付成功，修改订单状态
+     * 支付成功，修改订单状态（微信支付回调入口）。
      */
     public void paySuccess(String outTradeNo) {
-        Orders ordersDB = orderMapper.getByNumber(outTradeNo);
+        Orders paidOrder = orderTransactionService.paymentInTransaction(outTradeNo);
 
-        Orders orders = Orders.builder()
-                .id(ordersDB.getId())
-                .status(Orders.TO_BE_CONFIRMED)
-                .payStatus(Orders.PAID)
-                .checkoutTime(LocalDateTime.now())
-                .build();
-
-        orderMapper.update(orders);
-
-        //通过消息队列向admin端发送支付成功通知
-        rocketMQProducerService.sendOrderNotification(ordersDB.getId(), 1, "订单号：" + outTradeNo);
+        //全局事务提交完成后发送支付成功通知
+        rocketMQProducerService.sendOrderNotification(paidOrder.getId(), 1, "订单号：" + outTradeNo);
     }
 
     /**

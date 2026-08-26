@@ -143,7 +143,7 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **统一返回**：`Result<T>{code,msg,data}`（sky-common），`PageResult` 扩展分页。
 - **Nacos Config**：环境配置（datasource/redis/OSS/WeChat）全在 Nacos，本地 `application-dev.yml` 空壳。5 服务各配 `dev` + `docker` 两份 Nacos YAML，group `DEFAULT_GROUP`。`application.yml` 用 `spring.config.import: optional:nacos:sky-<service>-${spring.profiles.active}.yaml` 拉取；server-addr 用 `${NACOS_SERVER_ADDR:127.0.0.1:8848}`（Docker 注入 `nacos:8848`）。`AliOssProperties`/`JwtProperties`/`WeChatProperties` 带 `@RefreshScope` 热更新。**Redis key**：Boot 3.x 从 `spring.redis.*` 改 `spring.data.redis.*`（旧键被静默忽略）。
 - **OpenFeign 跨服务调用**：`FeignInterceptor` 从 `RequestContextHolder` 获取当前请求的 `X-User-Id`/`X-User-Role` Header，注入 Feign 请求，确保用户上下文跨服务传递。`FeignErrorDecoder` 将 Feign 错误转业务异常。order-service 通过 Feign 调用 user-service（用户/地址）、cart-service（购物车）、menu-service（菜品/套餐）。
-- **支付绕过**：`OrderServiceImpl.payment()` 为测试友好实现，直接构造 `ORDERPAID` 伪响应 → `paySuccess()`，不调用微信支付 API。上线需替换为真实 `WeChatPayUtil` 调用。
+- **支付绕过**：`OrderServiceImpl.payment()` 为测试友好实现，直接构造 `ORDERPAID` 伪响应 → `OrderTransactionService.paymentInTransaction()`，不调用微信支付 API；全局事务返回后再发 MQ。上线需替换为真实 `WeChatPayUtil` 调用。
 
 ### AI 点餐助手（sky-agent-service, :8087）
 - **Phase A 已完成**：Spring AI 1.1.2 `ChatClient` + OpenAI 兼容接口（Nacos `spring.ai.openai.*`，`completions-path` 已覆盖避免 `/v1/v1`），无状态单轮对话；同步 `POST /user/agent/chat` + SSE `POST /user/agent/chat/stream`。
@@ -169,7 +169,7 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **AT 模式**：SCA 2025 + Seata 2.5.0 **自动代理 DataSource**（无需手动 `DataSourceProxy`），自动 undo_log，异常 TC 协调回滚。Server：`seataio/seata-server:2.5.0`，`config.type: file` + `registry.type: nacos`（`docker/seata-server/application.yml`）。
 - **⚠️ Seata 注册 Nacos 需带凭据**：认证已开启，`registry.nacos` **必须**配 `username`/`password`（`${NACOS_USERNAME:nacos}`/`${NACOS_PASSWORD:SkyNacos@2026}`，compose 给 seata 加了 `env_file: .env`）。缺凭据 → 注册返回 `401 User not found` → `ServerRunner` 抛 `Server start failed` → 进程退出 → `restart:always` 崩溃循环。**仅在 seata 容器重建 / 宿主重启时暴露**，旧容器靠注册残留掩盖。
 - **⚠️ healthcheck 探针别写字节**：seata/namesrv/broker 的 compose healthcheck 用 `bash -c '< /dev/tcp/localhost/8091'`（只读建连、零字节），**不要** `echo > /dev/tcp/...`——`echo` 的换行 `\n`(0x0A) 被 Seata TC `ProtocolDetectHandler` 当未知协议首字节，每探测周期打一条 `Can not recognize protocol ... preface = [10]` ERROR 刷屏（探活其实成功，纯噪声）。
-- **客户端**：`seata.tx-service-group=sky-order-group`（`application.yml`），`@GlobalTransactional` 在 `OrderServiceImpl.submitOrder()`/`payment()`（Service 层，与 Controller 层 `@SentinelResource` 分层避 AOP 冲突）。**表**：`seata` 库 4 张 + `sky_order_db` 库 undo_log（含 `ext` 列）。**非强依赖**：Server 不可用时降级为本地事务。**启动顺序**：Nacos → MySQL → Seata → sky-order-service → 其他服务 → sky-gateway。
+- **客户端**：`seata.tx-service-group=sky-order-service-group`（`application.yml` / Nacos），`@GlobalTransactional` 在 `OrderTransactionService.submitOrderInTransaction()`/`paymentInTransaction()`。**参与者**：order-service（`sky_order_db`）与 cart-service（`sky_cart_db`，`ShoppingCartServiceImpl.clean()` 带 `@Transactional`）。**表**：`seata` 库 4 张 + `sky_order_db`、`sky_cart_db` 两个参与库的 undo_log（含 `ext` 列）。**非强依赖**：Server 不可用时降级为本地事务。**启动顺序**：Nacos → MySQL → Seata → sky-order-service / sky-cart-service → 其他服务 → sky-gateway。
 
 ### RocketMQ 消息队列（#4）
 - **架构**：`sky-order-service`（生产者）→ RocketMQ Broker → `sky-admin-service`（两个消费者组）。生产者在订单状态变更时异步发送通知。

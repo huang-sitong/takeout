@@ -91,7 +91,8 @@ graph TB
     AgentSvc --- Nacos
     GW --- Nacos
 
-    OrderSvc ---|"AT 模式"| Seata
+    OrderSvc ---|"AT 模式 (TM)"| Seata
+    CartSvc ---|"AT 分支"| Seata
     OrderSvc ---|"生产者"| RocketMQ
     RocketMQ ---|"集群消费者<br/>写DB"| AdminSvc
     RocketMQ ---|"广播消费者<br/>WebSocket"| AdminSvc
@@ -127,7 +128,7 @@ graph TB
 调用流：sky-order-service ──OpenFeign──→ sky-user-service（用户/地址）
                           ──OpenFeign──→ sky-menu-service（菜品/套餐）
                           ──OpenFeign──→ sky-cart-service（购物车）
-事务流：sky-order-service ──@GlobalTransactional──→ Seata TC ──协调──→ 5 个数据库的 undo_log 自动回滚
+事务流：sky-order-service ──@GlobalTransactional──→ Seata TC ──协调──→ sky_order_db + sky_cart_db 两个参与库的 undo_log 自动回滚
 消息流：订单状态变更 → RocketMQProducerService(asyncSend) → Topic: order-notification(5种Tag) → ┬ RocketMQConsumerService(集群) → order_notification审计表
                                                                                                                                  └ RocketMQWebSocketConsumer(广播) → WebSocket推送商家端
 AI 流：客户端 → sky-gateway(JWT) → sky-agent-service（ChatClient + Function Calling）→ OrderingTools（ToolContext 传 userId）─OpenFeign─→ menu/cart/order-service
@@ -219,8 +220,10 @@ sky-take-out
 ### 分布式事务（Seata AT 模式）
 
 - **自动代理**：SCA 2025 + Seata 2.5.0 自动代理 DataSource，无需手动配置 `DataSourceProxy`
-- **回滚机制**：`undo_log` 表记录前镜像，异常时 TC 协调自动回滚
-- **事务边界**：`@GlobalTransactional` 标注在 `OrderServiceImpl.submitOrder()` / `payment()`
+- **回滚机制**：`sky_order_db`、`sky_cart_db` 均创建 `undo_log`，异常时 TC 协调自动回滚
+- **事务边界**：`@GlobalTransactional` 标注在 `OrderTransactionService.submitOrderInTransaction()` / `paymentInTransaction()`；地址查询、地图校验、购物车查询在事务外完成
+- **事务参与者**：order-service 写 `orders/order_detail`，cart-service 写 `shopping_cart`（`clean()` 带本地事务）
+- **MQ 时机**：全局事务成功返回后才发送 RocketMQ 通知，避免回滚后仍发消息
 - **降级策略**：Seata Server 不可用时自动降级为本地事务
 
 ### 消息队列（RocketMQ）
@@ -455,7 +458,7 @@ sequenceDiagram
 
 ### 支付模拟
 
-`OrderServiceImpl.payment()` 为测试友好的实现，直接构造 `ORDERPAID` 伪响应后调用 `paySuccess()` 更新订单状态，**不调用微信支付 API**。上线前需替换为真实的 `WeChatPayUtil` 调用。
+`OrderServiceImpl.payment()` 为测试友好的实现，直接构造 `ORDERPAID` 伪响应后调用 `OrderTransactionService.paymentInTransaction()` 更新订单状态，**不调用微信支付 API**；全局事务成功返回后再发送支付成功 MQ。上线前需替换为真实的 `WeChatPayUtil` 调用。
 
 ## 注意事项
 

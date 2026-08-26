@@ -4,8 +4,9 @@
 # 配置格式: YAML
 #
 # sky-cart-service (:8085) — 购物车
-# 数据库: sky_cart_db  表: shopping_cart
+# 数据库: sky_cart_db  表: shopping_cart, undo_log
 # 依赖: sky-menu-service（通过 OpenFeign 获取菜品/套餐信息）
+# 中间件: Seata（作为 order-service 全局事务的购物车分支参与者）
 
 spring:
   datasource:
@@ -20,6 +21,15 @@ spring:
         dashboard: localhost:8858
         port: 8719
       eager: true
+
+seata:
+  enabled: true
+  tx-service-group: sky-order-service-group
+  service:
+    vgroup-mapping:
+      sky-order-service-group: default
+    grouplist:
+      default: 127.0.0.1:8091
 
 logging:
   level:
