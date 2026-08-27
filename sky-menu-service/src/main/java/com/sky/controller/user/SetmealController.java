@@ -10,6 +10,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
@@ -44,6 +45,18 @@ public class SetmealController {
      */
     @GetMapping("/dish/{id}")
     public Result<List<DishItemVO>> dishList(@PathVariable("id") Long id) {
+        List<DishItemVO> list = setmealService.getDishItemById(id);
+        return Result.success(list);
+    }
+
+    /**
+     * 根据套餐id查询包含的菜品列表（精确路径版，避免路径变量触发全量 mapping 遍历）
+     *
+     * @param id
+     * @return
+     */
+    @GetMapping("/dish")
+    public Result<List<DishItemVO>> dishListByParam(@RequestParam("id") Long id) {
         List<DishItemVO> list = setmealService.getDishItemById(id);
         return Result.success(list);
     }

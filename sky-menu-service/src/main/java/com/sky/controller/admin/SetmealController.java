@@ -72,6 +72,18 @@ public class SetmealController {
     }
 
     /**
+     * 根据id查询套餐的详细信息（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param id
+     * @return
+     */
+    @GetMapping("/detail")
+    public Result<SetmealVO> getByIdByParam(@RequestParam("id") Long id){
+        log.info("根据id查询套餐:{}", id);
+        SetmealVO setmealVO = setmealService.getByIdWithDish(id);
+        return Result.success(setmealVO);
+    }
+
+    /**
      * 更新菜品信息
      * @param setmealDTO
      * @return
@@ -93,6 +105,19 @@ public class SetmealController {
     @PostMapping("/status/{status}")
     @CacheEvict(cacheNames = "setmealCache", allEntries = true) //删除所有缓存
     public Result startOrStop(@PathVariable Integer status, Long id) {
+        setmealService.startOrStop(status, id);
+        return Result.success();
+    }
+
+    /**
+     * 套餐起售停售（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param status
+     * @param id
+     * @return
+     */
+    @PostMapping("/status")
+    @CacheEvict(cacheNames = "setmealCache", allEntries = true) //删除所有缓存
+    public Result startOrStopByParam(@RequestParam("status") Integer status, @RequestParam("id") Long id) {
         setmealService.startOrStop(status, id);
         return Result.success();
     }

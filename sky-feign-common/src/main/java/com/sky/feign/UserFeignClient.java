@@ -24,16 +24,16 @@ public interface UserFeignClient {
      * @param id 用户id
      * @return 用户实体
      */
-    @GetMapping("/user/user/{id}")
-    Result<User> getUserById(@PathVariable("id") Long id);
+    @GetMapping("/user/user/detail")
+    Result<User> getUserById(@RequestParam("id") Long id);
 
     /**
      * 根据id查询地址信息
      * @param id 地址id
      * @return 地址实体
      */
-    @GetMapping("/user/addressBook/{id}")
-    Result<AddressBook> getAddressById(@PathVariable("id") Long id);
+    @GetMapping("/user/addressBook/detail")
+    Result<AddressBook> getAddressById(@RequestParam("id") Long id);
 
     /**
      * 根据日期统计用户数量

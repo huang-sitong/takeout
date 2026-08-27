@@ -31,6 +31,18 @@ public class ShopController {
     }
 
     /**
+     * 设置店铺状态（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param status
+     * @return
+     */
+    @PutMapping("/status")
+    public Result setStatusByParam(@RequestParam Integer status){
+        log.info("设置店铺状态为:{}", status == 1?"营业中":"打烊中");
+        redisTemplate.opsForValue().set(KEY,status);
+        return Result.success();
+    }
+
+    /**
      * 获取店铺营业状态
      * @return
      */

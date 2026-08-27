@@ -46,6 +46,12 @@ public class AddressBookController {
         return Result.success(addressBook);
     }
 
+    @GetMapping("/detail")
+    public Result<AddressBook> getByIdByParam(@RequestParam("id") Long id) {
+        AddressBook addressBook = addressBookService.getById(id);
+        return Result.success(addressBook);
+    }
+
     /**
      * 根据id修改地址
      *

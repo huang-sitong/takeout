@@ -25,16 +25,16 @@ public interface MenuFeignClient {
      * @param id 菜品id
      * @return 菜品VO
      */
-    @GetMapping("/admin/dish/{id}")
-    Result<DishVO> getDishById(@PathVariable("id") Long id);
+    @GetMapping("/admin/dish/detail")
+    Result<DishVO> getDishById(@RequestParam("id") Long id);
 
     /**
      * 根据id查询套餐（含关联菜品）
      * @param id 套餐id
      * @return 套餐VO
      */
-    @GetMapping("/admin/setmeal/{id}")
-    Result<com.sky.vo.menu.SetmealVO> getSetmealById(@PathVariable("id") Long id);
+    @GetMapping("/admin/setmeal/detail")
+    Result<com.sky.vo.menu.SetmealVO> getSetmealById(@RequestParam("id") Long id);
 
     /**
      * 根据分类id查询菜品列表

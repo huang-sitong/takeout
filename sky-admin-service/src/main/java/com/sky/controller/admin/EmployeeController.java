@@ -113,12 +113,37 @@ public class EmployeeController {
     }
 
     /**
+     * 设置员工状态（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param status
+     * @param id
+     * @return
+     */
+    @PostMapping("/status")
+    public Result updateStatusByParam(@RequestParam("status") Integer status, @RequestParam("id") Long id) {
+        log.info("设置员工{} 状态为{}", id, status);
+        employeeService.updateStatus(status, id);
+        return Result.success();
+    }
+
+    /**
      * 查询员工信息
      * @param id
      * @return
      */
     @GetMapping("/{id}")
     public Result<Employee> getById(@PathVariable("id") Long id) {
+        log.info("查询员工：{} 的信息...", id);
+        Employee employee = employeeService.getById(id);
+        return Result.success(employee);
+    }
+
+    /**
+     * 查询员工信息（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param id
+     * @return
+     */
+    @GetMapping("/detail")
+    public Result<Employee> getByIdByParam(@RequestParam("id") Long id) {
         log.info("查询员工：{} 的信息...", id);
         Employee employee = employeeService.getById(id);
         return Result.success(employee);

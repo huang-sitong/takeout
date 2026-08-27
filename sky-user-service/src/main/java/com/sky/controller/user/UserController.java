@@ -61,6 +61,18 @@ public class UserController {
     }
 
     /**
+     * 根据id查询用户信息（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param id
+     * @return
+     */
+    @GetMapping("/detail")
+    public Result<User> getByIdByParam(@RequestParam("id") Long id) {
+        log.info("查询用户：{} 的信息...", id);
+        User user = userService.getById(id);
+        return Result.success(user);
+    }
+
+    /**
      * 根据日期统计用户数量（供 Feign 内部调用）
      * @param begin 开始时间（可选）
      * @param end 结束时间（可选）

@@ -1,0 +1,44 @@
+# ============================================================
+# 性能测试专用编排 —— 最小链路: nacos + gateway + menu-service
+# 通过环境变量按阶段控制:
+#   GATEWAY_SENTINEL=false (阶段1/2) / true (阶段3)
+# 用法: docker compose -f docker-compose.perf.yml up -d
+# ============================================================
+services:
+  sky-gateway:
+    image: sky-gateway:1.0-SNAPSHOT
+    container_name: sky-perf-gateway
+    restart: "no"
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+      - SPRING_CLOUD_SENTINEL_ENABLED=${GATEWAY_SENTINEL:-false}
+      - SPRING_CLOUD_SENTINEL_SCG_ENABLED=${GATEWAY_SENTINEL:-false}
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - takeout_sky-net
+
+  sky-menu-service:
+    image: sky-menu-service:1.0-SNAPSHOT
+    container_name: sky-perf-menu
+    restart: "no"
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - takeout_sky-net
+
+networks:
+  takeout_sky-net:
+    external: true

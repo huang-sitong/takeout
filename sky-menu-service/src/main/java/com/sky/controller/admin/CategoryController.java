@@ -82,6 +82,18 @@ public class CategoryController {
     }
 
     /**
+     * 启用、禁用分类（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param status
+     * @param id
+     * @return
+     */
+    @PostMapping("/status")
+    public Result<String> startOrStopByParam(@RequestParam("status") Integer status, @RequestParam("id") Long id){
+        categoryService.startOrStop(status,id);
+        return Result.success();
+    }
+
+    /**
      * 根据类型查询分类
      * @param type
      * @return

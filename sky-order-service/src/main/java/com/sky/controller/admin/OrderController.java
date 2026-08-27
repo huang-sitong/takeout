@@ -58,6 +58,18 @@ public class OrderController {
     }
 
     /**
+     * 订单详情（精确路径版，避免路径变量触发全量 mapping 遍历）
+     *
+     * @param id
+     * @return
+     */
+    @GetMapping("/details")
+    public Result<OrderVO> detailsByParam(@RequestParam("id") Long id) {
+        OrderVO orderVO = orderService.searchOrder(id);
+        return Result.success(orderVO);
+    }
+
+    /**
      * 接单
      *
      * @return
@@ -103,6 +115,17 @@ public class OrderController {
     }
 
     /**
+     * 派送订单（精确路径版，避免路径变量触发全量 mapping 遍历）
+     *
+     * @return
+     */
+    @PutMapping("/delivery")
+    public Result deliveryByParam(@RequestParam("id") Long id) {
+        orderService.delivery(id);
+        return Result.success();
+    }
+
+    /**
      * 完成订单
      *
      * @return
@@ -110,6 +133,18 @@ public class OrderController {
     @PutMapping("/complete/{id}")
     @SentinelResource(value = "completeOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "completeOrder")
     public Result complete(@PathVariable("id") Long id) {
+        orderService.complete(id);
+        return Result.success();
+    }
+
+    /**
+     * 完成订单（精确路径版，避免路径变量触发全量 mapping 遍历）
+     *
+     * @return
+     */
+    @PutMapping("/complete")
+    @SentinelResource(value = "completeOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "completeOrder")
+    public Result completeByParam(@RequestParam("id") Long id) {
         orderService.complete(id);
         return Result.success();
     }

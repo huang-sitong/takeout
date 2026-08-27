@@ -24,7 +24,8 @@ import java.util.Set;
 public class DishController {
     @Autowired
     private DishService dishService;
-    @Autowired
+    /** 缓存未启用（sky.cache.enabled=false）时为 null，跳过缓存清理 */
+    @Autowired(required = false)
     private RedisTemplate<Object, Object> redisTemplate;
 
     /**
@@ -81,6 +82,18 @@ public class DishController {
     }
 
     /**
+     * 根据id查询菜品（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param id
+     * @return
+     */
+    @GetMapping("/detail")
+    public Result<DishVO> getByIdByParam(@RequestParam("id") Long id){
+        log.info("根据id查询菜品:{}", id);
+        DishVO dishVO = dishService.getByIdWithFlavor(id);
+        return Result.success(dishVO);
+    }
+
+    /**
      * 更新菜品
      * @param dishDTO
      * @return
@@ -120,6 +133,18 @@ public class DishController {
     }
 
     /**
+     * 菜品启用/停用（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @return
+     */
+    @PostMapping("status")
+    public Result setDishStatusByParam(@RequestParam("status") Integer status, @RequestParam("id") Long id){
+        log.info("将菜品{}的状态设置为{}", id, status);
+        dishService.setDishStatus(status, id);
+        //deletCache("dish_*");
+        return Result.success();
+    }
+
+    /**
      * 根据状态统计菜品数量（供 Feign 内部调用）
      * @param status 菜品状态
      * @return 菜品数量
@@ -136,6 +161,9 @@ public class DishController {
      * @param pattern
      */
     private void deletCache(String pattern){
+        if (redisTemplate == null) {
+            return; // 缓存未启用，无需清理
+        }
         Set keys = redisTemplate.keys(pattern);
         redisTemplate.delete(keys);
     }

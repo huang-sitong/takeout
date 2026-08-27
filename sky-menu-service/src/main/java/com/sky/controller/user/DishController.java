@@ -19,7 +19,8 @@ import java.util.List;
 public class DishController {
     @Autowired
     private DishService dishService;
-    @Autowired
+    /** 缓存未启用（sky.cache.enabled=false）时为 null，直接查数据库 */
+    @Autowired(required = false)
     private RedisTemplate<Object, Object> redisTemplate;
 
     /**
@@ -30,6 +31,13 @@ public class DishController {
      */
     @GetMapping("/list")
     public Result<List<DishVO>> list(Long categoryId) {
+        //缓存未启用时直接查数据库（无缓存瓶颈对比测试）
+        if (redisTemplate == null) {
+            Dish dish = new Dish();
+            dish.setCategoryId(categoryId);
+            dish.setStatus(StatusConstant.ENABLE);//查询起售中的菜品
+            return Result.success(dishService.listWithFlavor(dish));
+        }
         //先从缓存中查询是否存在目标菜品
         String key = "dish_" + categoryId;
         List<DishVO> list = (List<DishVO>) redisTemplate.opsForValue().get(key);

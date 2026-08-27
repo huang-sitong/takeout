@@ -77,6 +77,18 @@ public class OrderController {
     }
 
     /**
+     * 查询订单详细信息（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param id
+     * @return
+     */
+    @GetMapping("/orderDetail")
+    public Result<OrderVO> searchOrderByParam(@RequestParam("id") Long id){
+        log.info("查询订单详细信息:{}", id);
+        OrderVO orderVO = orderService.searchOrder(id);
+        return Result.success(orderVO);
+    }
+
+    /**
      * 用户取消订单
      *
      * @return
@@ -84,6 +96,18 @@ public class OrderController {
     @PutMapping("/cancel/{id}")
     @SentinelResource(value = "userCancelOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "userCancelOrder")
     public Result cancel(@PathVariable("id") Long id) throws Exception {
+        orderService.userCancelById(id);
+        return Result.success();
+    }
+
+    /**
+     * 用户取消订单（精确路径版，避免路径变量触发全量 mapping 遍历）
+     *
+     * @return
+     */
+    @PutMapping("/cancel")
+    @SentinelResource(value = "userCancelOrder", blockHandlerClass = SentinelBlockHandler.class, blockHandler = "userCancelOrder")
+    public Result cancelByParam(@RequestParam("id") Long id) throws Exception {
         orderService.userCancelById(id);
         return Result.success();
     }
@@ -100,11 +124,33 @@ public class OrderController {
     }
 
     /**
+     * 再来一单（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @param id
+     * @return
+     */
+    @PostMapping("/repetition")
+    public Result repetitionByParam(@RequestParam("id") Long id) {
+        orderService.repetition(id);
+        return Result.success();
+    }
+
+    /**
      * 催单
      * @return
      */
     @GetMapping("/reminder/{id}")
     public Result reminder(@PathVariable Long id){
+        log.info("user催单:{}", id);
+        orderService.reminder(id);
+        return Result.success();
+    }
+
+    /**
+     * 催单（精确路径版，避免路径变量触发全量 mapping 遍历）
+     * @return
+     */
+    @GetMapping("/reminder")
+    public Result reminderByParam(@RequestParam("id") Long id){
         log.info("user催单:{}", id);
         orderService.reminder(id);
         return Result.success();
