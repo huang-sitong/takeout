@@ -7,6 +7,16 @@
 # 数据库: sky_menu_db  表: category, dish, dish_flavor, setmeal, setmeal_dish
 # Redis: 菜品/套餐缓存    OSS: 图片上传
 
+# 性能优化：调大 Tomcat 线程池/连接参数（与 docker 模板保持一致）
+server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 50
+    accept-count: 500
+    max-connections: 10000
+    connection-timeout: 5000
+
 spring:
   datasource:
     druid:
