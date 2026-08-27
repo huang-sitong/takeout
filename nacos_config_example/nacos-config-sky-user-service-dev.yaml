@@ -18,6 +18,9 @@ server:
     connection-timeout: 5000
 
 spring:
+  threads:
+    virtual:
+      enabled: true
   datasource:
     druid:
       driver-class-name: com.mysql.cj.jdbc.Driver

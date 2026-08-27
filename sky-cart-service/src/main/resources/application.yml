@@ -3,6 +3,9 @@ server:
   shutdown: graceful
 
 spring:
+  threads:
+    virtual:
+      enabled: true
   application:
     name: sky-cart-service
   profiles:

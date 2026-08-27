@@ -18,6 +18,9 @@ server:
     connection-timeout: 5000
 
 spring:
+  threads:
+    virtual:
+      enabled: true
   data:
     redis:
       host: localhost

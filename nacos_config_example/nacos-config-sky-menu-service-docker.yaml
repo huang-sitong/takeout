@@ -18,6 +18,9 @@ server:
     connection-timeout: 5000
 
 spring:
+  threads:
+    virtual:
+      enabled: true
   datasource:
     url: jdbc:mysql://host.docker.internal:3306/sky_menu_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
     driver-class-name: com.mysql.cj.jdbc.Driver
