@@ -1,0 +1,135 @@
+# ============================================================
+# 多实例水平扩展编排 —— 配合主编排叠加使用
+#
+# 用法（在 docker-compose.yml 基础上叠加，启动核心服务副本）：
+#   docker compose -f docker-compose.yml -f docker-compose.scale.yml up -d
+#
+# 原理：
+#   - 副本容器与主实例使用同一镜像（同一 spring.application.name）
+#   - 各副本自动向 Nacos 注册为同名服务的多个实例
+#   - Gateway 已用 lb://（Spring Cloud LoadBalancer）在实例间轮询，无需改动
+#   - Sentinel 流控/降级规则按资源名生效，对多实例同样适用
+#
+# 说明：
+#   - 仅给核心下单链路（menu/user/cart/order）各加 1 个副本 → 每服务 2 实例
+#   - 主机端口错开（x8xx 系列），容器内端口保持默认
+#   - 如需更多副本，复制并改 container_name 与 ports 即可
+#   - Seata：同 tx-service-group 支持多实例；Seata AT 全局锁保证并发正确
+#   - 下单并发闸（OrderServiceImpl.userSubmitLocks）是单实例防护，
+#     多实例下依赖 Seata 全局锁/DB 幂等，已在代码注释说明
+# ============================================================
+services:
+  # ---------------- sky-menu-service 副本 ----------------
+  sky-menu-service-2:
+    image: ${REGISTRY_PREFIX:-}sky-menu-service:${IMAGE_TAG:-1.0-SNAPSHOT}
+    container_name: sky-menu-service-2
+    restart: always
+    ports:
+      - "8284:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8084/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+    depends_on:
+      nacos:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ---------------- sky-user-service 副本 ----------------
+  sky-user-service-2:
+    image: ${REGISTRY_PREFIX:-}sky-user-service:${IMAGE_TAG:-1.0-SNAPSHOT}
+    container_name: sky-user-service-2
+    restart: always
+    ports:
+      - "8283:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8083/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  # ---------------- sky-cart-service 副本 ----------------
+  sky-cart-service-2:
+    image: ${REGISTRY_PREFIX:-}sky-cart-service:${IMAGE_TAG:-1.0-SNAPSHOT}
+    container_name: sky-cart-service-2
+    restart: always
+    ports:
+      - "8285:8085"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8085/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      nacos:
+        condition: service_healthy
+      seata:
+        condition: service_healthy
+
+  # ---------------- sky-order-service 副本 ----------------
+  sky-order-service-2:
+    image: ${REGISTRY_PREFIX:-}sky-order-service:${IMAGE_TAG:-1.0-SNAPSHOT}
+    container_name: sky-order-service-2
+    restart: always
+    ports:
+      - "8286:8086"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos:8848
+      - TEST_SEATA_FAULT_POINT=${TEST_SEATA_FAULT_POINT:-none}
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - sky-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -s http://localhost:8086/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    depends_on:
+      nacos:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      seata:
+        condition: service_healthy
+      namesrv:
+        condition: service_healthy
