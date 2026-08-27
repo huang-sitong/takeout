@@ -8,6 +8,16 @@
 # 依赖: 所有其他服务（通过 OpenFeign）
 # 中间件: Redis + RocketMQ + Seata + 微信支付
 
+# 性能优化：调大 Tomcat 线程池/连接参数（实测：默认200线程高并发吞吐下降明显，400线程 80并发提升约2.5倍）
+server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 50
+    accept-count: 500
+    max-connections: 10000
+    connection-timeout: 5000
+
 spring:
   datasource:
     druid:

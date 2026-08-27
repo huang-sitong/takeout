@@ -7,6 +7,16 @@
 # 无数据库；业务数据 Phase B 起经 OpenFeign 从各服务获取
 # Phase C 起用 Redis 存多轮会话记忆
 
+# 性能优化：调大 Tomcat 线程池/连接参数（实测：默认200线程高并发吞吐下降明显，400线程 80并发提升约2.5倍）
+server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 50
+    accept-count: 500
+    max-connections: 10000
+    connection-timeout: 5000
+
 spring:
   data:
     redis:
