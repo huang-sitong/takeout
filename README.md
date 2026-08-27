@@ -8,13 +8,13 @@
 
 ## 技术栈
 
-> 已升级至 Spring Boot 3.x（原 Spring Boot 2.7.3），`javax.*` → `jakarta.*`，要求 JDK 17+。
+> 已升级至 Spring Boot 3.x（原 Spring Boot 2.7.3），`javax.*` → `jakarta.*`，要求 JDK 21+（启用虚拟线程）。
 
 ### 后端
 
 | 分类 | 技术 | 版本 |
 |------|------|------|
-| **运行时** | JDK 17（Jakarta EE namespace） | 17+ |
+| **运行时** | JDK 21（Jakarta EE namespace，虚拟线程） | 21+ |
 | **核心框架** | Spring Boot | 3.5.0 |
 | **微服务治理** | Spring Cloud / Spring Cloud Alibaba | 2025.0.0 / 2025.0.0.0 |
 | **注册 & 配置** | Nacos（认证已开启） | 3.0.3 |
@@ -247,7 +247,7 @@ sky-take-out
 
 ### 环境要求
 
-- **JDK 17+**（JDK 24 不兼容 Lombok）
+- **JDK 21+**（JDK 24 不兼容 Lombok）
 - **Maven 3.6+**
 - **MySQL 5.7+**（Windows 原生服务，root/123456）
 - **Docker Desktop**
@@ -488,7 +488,7 @@ Gateway 模块必须显式声明以下依赖（不会自动传递）：
 
 ### Windows 编码
 
-Windows 原生 JDK 17 默认 GBK 编码，运行 Maven 或 Spring Boot 前必须设置 `JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"`。Linux / WSL / macOS 无需此步骤。
+Windows 原生 JDK 默认 GBK 编码，运行 Maven 或 Spring Boot 前必须设置 `JAVA_TOOL_OPTIONS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"`。Linux / WSL / macOS 无需此步骤。
 
 ### 启动顺序
 

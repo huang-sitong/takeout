@@ -1,10 +1,10 @@
 # AGENTS.md
 
-Guidance for agent working in this repo. **Spring Boot 3.5.0 + Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0**（原 Boot 2.7.3 已升级；`javax.*`→`jakarta.*`，JDK 17 起步）。
+Guidance for agent working in this repo. **Spring Boot 3.5.0 + Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0**（原 Boot 2.7.3 已升级；`javax.*`→`jakarta.*`，JDK 21 起步）。
 
 ## Environment
 
-- **JDK 17** required — JDK 24 breaks Lombok（`@Data`/`@Builder` 注解处理失败）；`JAVA_HOME` 必须指向 JDK 17，跑 Maven 前先 `java -version` 核对。
+- **JDK 21** required（虚拟线程优化，`spring.threads.virtual.enabled=true`）— JDK 24 breaks Lombok（`@Data`/`@Builder` 注解处理失败）；`JAVA_HOME` 必须指向 JDK 21，跑 Maven 前先 `java -version` 核对。
 - Maven 3.6+（无 `mvnw`，用系统 `mvn`）、MySQL 5.7+（Windows 原生服务）、Docker Desktop。
 
 ## Build & Run
@@ -197,7 +197,7 @@ JWT 认证在 **sky-gateway**（`JwtAuthGlobalFilter`），校验后通过 `X-Us
 - **Nacos client**：版本由 SCA 2025 BOM 管理（**3.0.3**），对齐 server v3.0.3，**不再 pin**。此前"pin 2.5.1 避免 403"已废弃——`Handle API Compatibility failed` 真实根因是服务端**关闭认证**致 v1 登录端点未激活，非客户端版本；开启认证后正常。
 - **Nacos 认证**：`NACOS_AUTH_ENABLE=true`，客户端凭据由 `.env` 的 `NACOS_USERNAME`/`NACOS_PASSWORD` 提供（`application.yml` 与 Nacos 模板的 Sentinel datasource 用 `${NACOS_PASSWORD:...}` 占位符）。
 - **敏感配置**：credentials/AKSK 放 Nacos 用 `${ENV_VAR}` 占位符或本地模板，绝不提交；`application-dev.yml` 与 `docs/` 已 gitignore。
-- **Windows 编码坑**：Windows 原生 JDK 17 默认 GBK，Nacos UTF-8 YAML 会解析失败——仅 Windows 需启动前设 `JAVA_TOOL_OPTIONS`（见 Build & Run）。
+- **Windows 编码坑**：Windows 原生 JDK 默认 GBK，Nacos UTF-8 YAML 会解析失败——仅 Windows 需启动前设 `JAVA_TOOL_OPTIONS`（见 Build & Run）。
 - **每个微服务需 `@ComponentScan(basePackages = "com.sky")`**：`GlobalExceptionHandler` 已移至 `sky-common`，各服务必须显式扫描才能发现该 Bean，否则业务异常直接 500。
 - **`@RestController` 需显式命名**：同路径的 Controller 在多个服务中可能共处一个 classpath（如 admin/ShopController 和 user/ShopController 都在 order-service），一个不加 `@RestController("beanName")` → Spring 容器冲突 → 启动失败。
 - **Feign 客户端需 `spring-cloud-starter-loadbalancer`**：cart/order 服务的 `pom.xml` 必须显式声明，否则 `No Feign Client for loadBalancing defined`。

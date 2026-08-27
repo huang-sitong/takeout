@@ -58,11 +58,11 @@ jobs:
             echo "version=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
           cache: maven
 
       # 各服务 Dockerfile 是 COPY target/*.jar 的形式，必须先打 JAR

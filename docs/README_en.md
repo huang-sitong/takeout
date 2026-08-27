@@ -6,10 +6,10 @@ Cang Qiong Take-Out is a complete takeout ordering system using front-end/back-e
 
 ## Tech Stack
 
-> Upgraded to Spring Boot 3.x (from Spring Boot 2.7.3). `javax.*` to `jakarta.*`, JDK 17+.
+> Upgraded to Spring Boot 3.x (from Spring Boot 2.7.3). `javax.*` to `jakarta.*`, JDK 21+ (virtual threads enabled).
 
 ### Backend
-- **Runtime**: JDK 17 (Jakarta EE namespace; JDK 24 incompatible with Lombok)
+- **Runtime**: JDK 21 (Jakarta EE namespace, virtual threads; JDK 24 incompatible with Lombok)
 - **Core Framework**: Spring Boot 3.5.0
 - **Microservice Governance**: Spring Cloud 2025.0.0 + Spring Cloud Alibaba 2025.0.0.0
 - **Registry & Config**: Nacos 3.0.3 (authentication enabled, console on port 8849)
@@ -107,7 +107,7 @@ sky-take-out
 ## Quick Start
 
 ### Prerequisites
-- JDK 17+
+- JDK 21+
 - Maven 3.6+
 - MySQL 5.7+
 - Docker Desktop
