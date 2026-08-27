@@ -27,10 +27,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 public class OrderServiceImpl implements OrderService{
 
@@ -53,6 +57,18 @@ public class OrderServiceImpl implements OrderService{
     private String shopAddress;
     @Value("${sky.baidu.ak}")
     private String ak;
+    /** 性能测试用：开启后跳过百度地图真实调用，返回固定坐标与 800m 距离（默认关闭） */
+    @Value("${sky.baidu.mock:false}")
+    private boolean baiduMock;
+
+    /**
+     * 单实例下单并发闸：同一用户提交订单串行化，避免同一购物车被两个并发请求
+     * 同时读到非空并生成重复订单。
+     *
+     * 说明：这是单实例部署下的并发防护；多实例扩容时应改为 Redis 分布式锁
+     * 或数据库侧幂等约束。
+     */
+    private final ConcurrentHashMap<Long, Object> userSubmitLocks = new ConcurrentHashMap<>();
 
     /**
      * 提交订单：读取与外部调用在事务外完成，核心写操作交给
@@ -64,6 +80,17 @@ public class OrderServiceImpl implements OrderService{
      * @return 订单提交结果
      */
     public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO){
+        Long userId = BaseContext.getCurrentId();
+        Object lock = userSubmitLocks.computeIfAbsent(userId, k -> new Object());
+        synchronized (lock) {
+            return doSubmitOrder(ordersSubmitDTO);
+        }
+    }
+
+    /**
+     * 同一用户串行化后的下单执行体。
+     */
+    private OrderSubmitVO doSubmitOrder(OrdersSubmitDTO ordersSubmitDTO){
         // 通过 Feign 远程获取地址信息
         Result<AddressBook> addressResult = userFeignClient.getAddressById(ordersSubmitDTO.getAddressBookId());
         AddressBook addressBook = addressResult.getData();
@@ -343,6 +370,10 @@ public class OrderServiceImpl implements OrderService{
      * 检查客户的收货地址是否超出配送范围
      */
     private void checkOutOfRange(String address) {
+        if (baiduMock) {
+            log.info("[perf-mock] skip Baidu map check for address: {}", address);
+            return;
+        }
         Map map = new HashMap();
         map.put("address",shopAddress);
         map.put("output","json");

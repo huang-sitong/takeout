@@ -8,6 +8,16 @@
 # 依赖: 所有其他服务（通过 OpenFeign）
 # 中间件: Redis + RocketMQ + Seata + 微信支付
 
+# 性能优化：调大 Tomcat 线程池/连接参数（实测：默认200线程高并发吞吐下降明显，400线程 80并发提升约2.5倍）
+server:
+  tomcat:
+    threads:
+      max: 400
+      min-spare: 50
+    accept-count: 500
+    max-connections: 10000
+    connection-timeout: 5000
+
 spring:
   datasource:
     url: jdbc:mysql://host.docker.internal:3306/sky_order_db?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
@@ -81,6 +91,9 @@ sky:
     address: ${SKY_SHOP_ADDRESS:桂林市灵川县灵田镇桂林电子科技大学花江校区}
   baidu:
     ak: ${SKY_BAIDU_AK:PLACEHOLDER}
+    # 性能测试开关：true 时跳过百度地图真实调用（checkOutOfRange 直接放行）
+    # 压测轮次设为 true，避免外部 API 延迟/配额污染结果；生产/验收必须为 false 或删除
+    mock: true
 
 logging:
   level:

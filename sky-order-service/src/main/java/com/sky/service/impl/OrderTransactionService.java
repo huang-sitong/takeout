@@ -96,6 +96,9 @@ public class OrderTransactionService {
     /**
      * 支付事务：按订单号更新支付状态。
      *
+     * 并发防重：先检查状态，再通过带状态条件的 UPDATE 抢占更新；
+     * 两个并发请求只有一个能命中 status=1/pay_status=0，另一个返回订单状态错误。
+     *
      * @param orderNumber 订单号
      * @return 更新前的订单基础信息（id、number），供事务提交后发送 MQ 使用
      */
@@ -106,6 +109,10 @@ public class OrderTransactionService {
         if (ordersDB == null) {
             throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
         }
+        if (!Orders.PENDING_PAYMENT.equals(ordersDB.getStatus())
+                || !Orders.UN_PAID.equals(ordersDB.getPayStatus())) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
 
         Orders orders = Orders.builder()
                 .id(ordersDB.getId())
@@ -114,7 +121,10 @@ public class OrderTransactionService {
                 .checkoutTime(LocalDateTime.now())
                 .build();
 
-        orderMapper.update(orders);
+        int updated = orderMapper.updatePayStatusIfPending(orders);
+        if (updated != 1) {
+            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+        }
         seataFaultInjector.fire("after-payment-update");
 
         return ordersDB;

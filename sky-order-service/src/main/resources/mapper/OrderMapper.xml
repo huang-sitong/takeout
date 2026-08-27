@@ -42,6 +42,17 @@
         where id = #{id}
     </update>
 
+    <update id="updatePayStatusIfPending" parameterType="com.sky.entity.Orders">
+        update orders
+        set status = #{status},
+            pay_status = #{payStatus},
+            checkout_time = #{checkoutTime}
+        where id = #{id}
+          and status = 1
+          and pay_status = 0
+    </update>
+
+
     <select id="pageQuery" resultType="com.sky.entity.Orders">
         select * from orders
         <where>

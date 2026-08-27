@@ -35,6 +35,14 @@ public interface OrderMapper {
     void update(Orders orders);
 
     /**
+     * 支付状态条件更新：仅当订单仍为待付款/未支付时生效，防止并发重复支付。
+     *
+     * @param orders 目标状态（status=2, pay_status=1, checkout_time）
+     * @return 受影响行数；0 表示订单状态已变化，不能再次支付
+     */
+    int updatePayStatusIfPending(Orders orders);
+
+    /**
      * 条件分页查询
      * @param ordersPageQueryDTO
      * @return
