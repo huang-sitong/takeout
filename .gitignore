@@ -2,6 +2,7 @@
 .others
 .claude
 .idea
+perf-test
 application-dev.yml
 *.iml
 *.class
