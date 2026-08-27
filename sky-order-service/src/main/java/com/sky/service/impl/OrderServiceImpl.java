@@ -176,8 +176,11 @@ public class OrderServiceImpl implements OrderService{
      * 查询订单详细信息
      */
     public OrderVO searchOrder(Long id) {
-        OrderVO orderVO = new OrderVO();
         Orders orders = orderMapper.getById(id);
+        if (orders == null) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        OrderVO orderVO = new OrderVO();
         BeanUtils.copyProperties(orders,orderVO);
         List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orders.getId());
         orderVO.setOrderDetailList(orderDetailList);

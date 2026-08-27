@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 订单核心写事务服务。
@@ -63,7 +64,9 @@ public class OrderTransactionService {
         orders.setOrderTime(LocalDateTime.now());
         orders.setStatus(Orders.PENDING_PAYMENT);
         orders.setPayStatus(Orders.UN_PAID);
-        orders.setNumber(String.valueOf(System.currentTimeMillis()));
+        // 订单号：时间戳前缀（可读/可排序）+ UUID 无横线后缀，保证多实例/高并发下全局唯一，
+        // 避免原毫秒时间戳在并发下单时碰撞导致 getByNumber 查出多行（varchar(50) 足够容纳）。
+        orders.setNumber(System.currentTimeMillis() + UUID.randomUUID().toString().replace("-", ""));
         orders.setPhone(addressBook.getPhone());
         orders.setConsignee(addressBook.getConsignee());
         orders.setUserId(userId);
